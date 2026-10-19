@@ -1353,6 +1353,30 @@ export default function App() {
   };
 
   const handleDeleteTransaction = (id: string) => {
+    // 0. Synthetic drawer-to-safe handover deletion
+    if (id.startsWith('handover_')) {
+      const targetDate = id.replace('handover_', '');
+      const amt = dailyDrawerHandoversRef.current[targetDate] || 0;
+      const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) - amt);
+      safeRunningBalanceRef.current = newSafe;
+      setSafeRunningBalance(newSafe);
+
+      const copy = { ...dailyDrawerHandoversRef.current };
+      delete copy[targetDate];
+      dailyDrawerHandoversRef.current = copy;
+      setDailyDrawerHandovers(copy);
+
+      try {
+        localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+        localStorage.setItem('daily_ledger_drawer_handovers', JSON.stringify(copy));
+      } catch (e) {
+        console.error(e);
+      }
+      syncSettingsToCloud({ safeRunningBalance: newSafe, dailyDrawerHandovers: copy });
+      showToast(`Removed safe handover for ${targetDate} (${formatPKR(amt)}). Register cash and safe balance restored.`, 'info');
+      return;
+    }
+
     const tx = transactions.find(t => t.id === id);
     if (tx && (tx.isInternalTransfer || isInternalTransferTransaction(tx))) {
       // 1. Safe to Individual being removed: return disbursed cash back into safe
@@ -1420,6 +1444,49 @@ export default function App() {
   };
 
   const handleUpdateTransaction = (id: string, updates: Partial<Transaction>) => {
+    // 1. Check if this is a synthetic daily drawer handover
+    if (id.startsWith('handover_')) {
+      const targetDate = id.replace('handover_', '');
+      const oldAmt = dailyDrawerHandoversRef.current[targetDate] || 0;
+      const newAmt = updates.amount !== undefined ? updates.amount : oldAmt;
+      const diff = newAmt - oldAmt;
+
+      const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) + diff);
+      safeRunningBalanceRef.current = newSafe;
+      setSafeRunningBalance(newSafe);
+
+      const targetDateAfterUpdate = updates.date && updates.date !== targetDate ? updates.date : targetDate;
+      let updatedHandovers: Record<string, number>;
+      if (targetDateAfterUpdate !== targetDate) {
+        const copy = { ...dailyDrawerHandoversRef.current };
+        delete copy[targetDate];
+        copy[targetDateAfterUpdate] = (copy[targetDateAfterUpdate] || 0) + newAmt;
+        updatedHandovers = copy;
+      } else {
+        updatedHandovers = {
+          ...dailyDrawerHandoversRef.current,
+          [targetDate]: newAmt
+        };
+      }
+      dailyDrawerHandoversRef.current = updatedHandovers;
+      setDailyDrawerHandovers(updatedHandovers);
+
+      try {
+        localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+        localStorage.setItem('daily_ledger_drawer_handovers', JSON.stringify(updatedHandovers));
+      } catch (e) {
+        console.error(e);
+      }
+
+      syncSettingsToCloud({
+        safeRunningBalance: newSafe,
+        dailyDrawerHandovers: updatedHandovers
+      });
+
+      showToast(`Safe handover for ${targetDateAfterUpdate} updated to ${formatPKR(newAmt)}! Safe balance and register cash updated.`, 'success');
+      return;
+    }
+
     const oldTx = transactions.find(t => t.id === id);
     if (oldTx && updates.amount !== undefined && updates.amount !== oldTx.amount) {
       const diff = updates.amount - oldTx.amount;
@@ -1433,8 +1500,14 @@ export default function App() {
            oldTx.description.toLowerCase().includes('safe to individual')) &&
           oldTx.transferSource === 'safe'
         ) {
-          const newSafe = Math.max(0, safeRunningBalance - diff);
+          const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) - diff);
+          safeRunningBalanceRef.current = newSafe;
           setSafeRunningBalance(newSafe);
+          try {
+            localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+          } catch (e) {
+            console.error(e);
+          }
           syncSettingsToCloud({ safeRunningBalance: newSafe });
         }
         // Safe to Bank: amount increased means more cash taken from safe into bank
@@ -1443,8 +1516,14 @@ export default function App() {
           (oldTx.transferDestination === 'bank' || oldTx.description.toLowerCase().includes('bank')) &&
           oldTx.transferSource === 'safe'
         ) {
-          const newSafe = Math.max(0, safeRunningBalance - diff);
+          const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) - diff);
+          safeRunningBalanceRef.current = newSafe;
           setSafeRunningBalance(newSafe);
+          try {
+            localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+          } catch (e) {
+            console.error(e);
+          }
           syncSettingsToCloud({ safeRunningBalance: newSafe });
         }
         // Drawer to Safe: amount increased means more cash went into safe
@@ -1455,17 +1534,39 @@ export default function App() {
            oldTx.category?.includes('Drawer ➔ Safe') ||
            oldTx.description.toLowerCase().includes('drawer to safe'))
         ) {
-          const newSafe = Math.max(0, safeRunningBalance + diff);
+          const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) + diff);
+          safeRunningBalanceRef.current = newSafe;
           setSafeRunningBalance(newSafe);
-          syncSettingsToCloud({ safeRunningBalance: newSafe });
+
+          const targetDate = updates.date || oldTx.date || selectedDate;
+          const updatedHandovers = {
+            ...dailyDrawerHandoversRef.current,
+            [targetDate]: Math.max(0, (dailyDrawerHandoversRef.current[targetDate] || 0) + diff)
+          };
+          dailyDrawerHandoversRef.current = updatedHandovers;
+          setDailyDrawerHandovers(updatedHandovers);
+
+          try {
+            localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+            localStorage.setItem('daily_ledger_drawer_handovers', JSON.stringify(updatedHandovers));
+          } catch (e) {
+            console.error(e);
+          }
+          syncSettingsToCloud({ safeRunningBalance: newSafe, dailyDrawerHandovers: updatedHandovers });
         }
         // Safe to Drawer: amount increased means more cash taken from safe
         else if (
           oldTx.type === 'cash_in' &&
           (oldTx.transferSource === 'safe' || oldTx.description.toLowerCase().includes('safe to drawer'))
         ) {
-          const newSafe = Math.max(0, safeRunningBalance - diff);
+          const newSafe = Math.max(0, (safeRunningBalanceRef.current || 0) - diff);
+          safeRunningBalanceRef.current = newSafe;
           setSafeRunningBalance(newSafe);
+          try {
+            localStorage.setItem('daily_ledger_safe_running_balance', String(newSafe));
+          } catch (e) {
+            console.error(e);
+          }
           syncSettingsToCloud({ safeRunningBalance: newSafe });
         }
       }
@@ -1475,7 +1576,24 @@ export default function App() {
       prev.map(t => (t.id === id ? { ...t, ...updates } : t))
     );
     updateTransactionInCloud(id, updates);
-    showToast('Transaction updated successfully.', 'success');
+    showToast('Safe transaction updated successfully! Safe balance and register cash refreshed.', 'success');
+  };
+
+  const handleUpdateVaultDeposit = (id: string, updates: Partial<VaultDeposit>) => {
+    setVaultDeposits(prev => {
+      const updated = prev.map(d => (d.id === id ? { ...d, ...updates } : d));
+      try {
+        localStorage.setItem('daily_ledger_vault_deposits', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      const targetDeposit = updated.find(d => d.id === id);
+      if (targetDeposit) {
+        saveVaultDepositToCloud(targetDeposit);
+      }
+      return updated;
+    });
+    showToast('Vault cash deposit updated successfully.', 'success');
   };
 
   // Populate sample 7-day past transactions for instant trend visualization
@@ -2047,6 +2165,8 @@ export default function App() {
               transactions={transactions}
               dailyDrawerHandovers={dailyDrawerHandovers}
               onDeleteTransaction={handleDeleteTransaction}
+              onUpdateTransaction={handleUpdateTransaction}
+              onUpdateVaultDeposit={handleUpdateVaultDeposit}
               onShowToast={showToast}
               onReconcileSafeBalance={handleReconcileSafeBalance}
             />

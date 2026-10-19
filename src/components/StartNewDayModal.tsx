@@ -103,32 +103,32 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
   return (
     <div
       id="modal-start-new-day"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 p-3 sm:p-4 md:p-6 flex min-h-full items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="start-day-title"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-stone-200 overflow-hidden transform transition-all"
+        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-stone-200 overflow-hidden transform transition-all flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-md text-white flex items-center justify-center shrink-0 border border-white/20">
-              <SunMedium className="w-6 h-6 text-amber-300" />
+        {/* Header (Pinned) */}
+        <div className="shrink-0 p-4 sm:p-5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/15 backdrop-blur-md text-white flex items-center justify-center shrink-0 border border-white/20">
+              <SunMedium className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 id="start-day-title" className="text-base font-bold text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="start-day-title" className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
                   Start New Day Ledger
                 </h3>
-                <span className="text-[10px] bg-emerald-900/60 text-emerald-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/30">
+                <span className="text-[10px] bg-emerald-900/60 text-emerald-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/30 shrink-0">
                   Daily Shift Close
                 </span>
               </div>
-              <p className="text-xs text-emerald-100 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-emerald-100 mt-0.5 line-clamp-1">
                 Rollover register drawer cash and open a clean daily cash book.
               </p>
             </div>
@@ -136,24 +136,24 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-emerald-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            className="text-emerald-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             title="Cancel"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        {/* Scrollable Content Body */}
+        <form id="form-start-new-day" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-5 space-y-4">
           {/* Previous Day Balance Recap */}
-          <div className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 text-xs">
+          <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 sm:p-3.5 text-xs">
             <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-2">
               Previous Closing Summary ({currentDate}):
             </span>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="bg-white p-2.5 rounded-lg border border-stone-200">
-                <span className="text-[11px] text-stone-500 block flex items-center gap-1 font-medium">
-                  <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[11px] text-stone-500 flex items-center gap-1 font-medium">
+                  <Wallet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <span>Closing Drawer Cash:</span>
                 </span>
                 <strong className="text-sm font-bold font-mono text-emerald-800 block mt-0.5">
@@ -163,8 +163,8 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
               </div>
 
               <div className="bg-white p-2.5 rounded-lg border border-stone-200">
-                <span className="text-[11px] text-stone-500 block flex items-center gap-1 font-medium">
-                  <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="text-[11px] text-stone-500 flex items-center gap-1 font-medium">
+                  <Lock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span>Safe Vault Total:</span>
                 </span>
                 <strong className="text-sm font-bold font-mono text-indigo-900 block mt-0.5">
@@ -177,7 +177,7 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
 
           {/* New Day Date Selection */}
           <div>
-            <label htmlFor="input-new-day-date" className="block text-xs font-bold text-stone-800 mb-1.5 flex items-center justify-between">
+            <label htmlFor="input-new-day-date" className="block text-xs font-bold text-stone-800 mb-1.5 flex flex-wrap items-center justify-between gap-1.5">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-emerald-700" />
                 <span>New Day Date</span>
@@ -186,7 +186,7 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewDate(getTodayString())}
-                  className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                  className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
                 >
                   Set to Today
                 </button>
@@ -194,7 +194,7 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setNewDate(getNextDayString(currentDate))}
-                  className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                  className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
                 >
                   Tomorrow (+1d)
                 </button>
@@ -229,12 +229,12 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
                   name="opening-option"
                   checked={openingOption === 'carry'}
                   onChange={() => setOpeningOption('carry')}
-                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
-                <div className="flex-1 text-xs">
-                  <div className="flex items-center justify-between font-bold text-stone-900">
-                    <span>Carry over previous closing register cash</span>
-                    <span className="font-mono text-emerald-800 text-sm">{formatPKR(Math.max(0, closingDrawerCash))}</span>
+                <div className="flex-1 min-w-0 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-bold text-stone-900">
+                    <span className="truncate">Carry over previous closing register cash</span>
+                    <span className="font-mono text-emerald-800 text-sm shrink-0">{formatPKR(Math.max(0, closingDrawerCash))}</span>
                   </div>
                   <p className="text-stone-500 text-[11px] mt-0.5">
                     Automatically uses yesterday's drawer cash balance as this morning's starting cash float.
@@ -255,9 +255,9 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
                   name="opening-option"
                   checked={openingOption === 'custom'}
                   onChange={() => setOpeningOption('custom')}
-                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
-                <div className="flex-1 text-xs">
+                <div className="flex-1 min-w-0 text-xs">
                   <div className="font-bold text-stone-900">Specify custom morning opening float</div>
                   <p className="text-stone-500 text-[11px] mt-0.5">
                     For example, if extra cash was deposited into safe and you leave a fixed float of Rs. 10,000 in the drawer.
@@ -295,9 +295,9 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
                   name="opening-option"
                   checked={openingOption === 'zero'}
                   onChange={() => setOpeningOption('zero')}
-                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
-                <div className="flex-1 text-xs">
+                <div className="flex-1 min-w-0 text-xs">
                   <span className="font-semibold text-stone-800">Start with Rs. 0 float (empty drawer)</span>
                 </div>
               </label>
@@ -313,24 +313,26 @@ export const StartNewDayModal: React.FC<StartNewDayModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-stone-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-            >
-              <CalendarPlus className="w-4 h-4" />
-              <span>Start Day ({newDate})</span>
-            </button>
-          </div>
         </form>
+
+        {/* Footer (Pinned outside scrolling form) */}
+        <div className="shrink-0 p-3.5 sm:p-4 bg-stone-50 border-t border-stone-200 flex flex-wrap items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-200/60 rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="form-start-new-day"
+            className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <CalendarPlus className="w-4 h-4" />
+            <span>Start Day ({newDate})</span>
+          </button>
+        </div>
       </div>
     </div>
   );

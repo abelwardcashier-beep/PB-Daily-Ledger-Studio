@@ -186,34 +186,34 @@ export const DataRecoveryModal: React.FC<DataRecoveryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-stone-900 via-stone-800 to-emerald-950 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex min-h-full items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto">
+        {/* Header (Pinned) */}
+        <div className="shrink-0 px-4 sm:px-6 py-4 bg-gradient-to-r from-stone-900 via-stone-800 to-emerald-950 text-white flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
               <Database className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                Data Recovery & Diagnostics Center
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 truncate">
+                Data Recovery &amp; Diagnostics Center
               </h2>
-              <p className="text-xs text-stone-300">
-                Inspect local storage, recover dates, and sync between Phone & PC
+              <p className="text-[11px] sm:text-xs text-stone-300 line-clamp-1">
+                Inspect local storage, recover dates, and sync between Phone &amp; PC
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-stone-800 text-xs">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0 space-y-5 text-stone-800 text-xs">
           {/* Quick Status Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl">
@@ -423,8 +423,8 @@ export const DataRecoveryModal: React.FC<DataRecoveryModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3 bg-stone-100 border-t border-stone-200 flex items-center justify-end">
+        {/* Footer (Pinned) */}
+        <div className="shrink-0 px-4 sm:px-6 py-3 bg-stone-100 border-t border-stone-200 flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}

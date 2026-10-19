@@ -129,7 +129,16 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       verified
     };
 
-    if (type === 'cash_in') {
+    if (isInternalTransfer) {
+      // Preserve internal safe/drawer transfer metadata
+      updates.isInternalTransfer = true;
+      updates.transferSource = transaction.transferSource;
+      updates.transferDestination = transaction.transferDestination;
+      updates.category = transaction.category || category.trim() || 'Internal Transfer';
+      updates.salesperson = salesperson.trim() || transaction.salesperson || undefined;
+      updates.receiptNumber = receiptNumber.trim() || undefined;
+      updates.biltyNumber = receiptNumber.trim() || undefined;
+    } else if (type === 'cash_in') {
       updates.salesperson = salesperson.trim() || undefined;
       updates.billNumber = billNumber.trim() || undefined;
       updates.category = category.trim() || 'Sales Revenue';
@@ -154,27 +163,27 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   return (
     <div
       id="modal-edit-transaction"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 overflow-y-auto"
+      className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 p-3 sm:p-4 md:p-6 flex min-h-full items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-transaction-modal-title"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden my-6 transform transition-all"
+        className="bg-white rounded-2xl max-w-xl md:max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto transform transition-all"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="p-4 sm:p-5 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        {/* Header (Pinned) */}
+        <div className="shrink-0 p-4 sm:p-5 bg-stone-50 border-b border-stone-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
               <Pencil className="w-4 h-4" />
             </div>
-            <div>
-              <h3 id="edit-transaction-modal-title" className="text-sm sm:text-base font-bold text-stone-900">
+            <div className="min-w-0">
+              <h3 id="edit-transaction-modal-title" className="text-sm sm:text-base font-bold text-stone-900 truncate">
                 Edit Ledger Entry
               </h3>
-              <p className="text-[11px] text-stone-500 font-mono">
+              <p className="text-[11px] text-stone-500 font-mono truncate">
                 Entry ID: {transaction.id.slice(0, 16)}...
               </p>
             </div>
@@ -182,15 +191,15 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
             title="Close editor (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[78vh] overflow-y-auto text-xs">
+        {/* Scrollable Form Body */}
+        <form id="form-edit-transaction" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-6 space-y-4 text-xs">
           {errorMsg && (
             <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-semibold">
               {errorMsg}
@@ -212,7 +221,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               <label className="block text-[11px] font-bold text-stone-700 mb-1">
                 Transaction Type
               </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-stone-100 rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1 bg-stone-100 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setType('cash_in')}
@@ -316,21 +325,21 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
                   Cash Out Category Classification:
                 </label>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
                       setMainCategory('expenses');
                       setCategory(EXPENSE_CATEGORIES[0]);
                     }}
-                    className={`py-2 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                    className={`py-2 px-2.5 rounded-lg border text-center transition-all cursor-pointer flex sm:flex-col items-center justify-center gap-1.5 sm:gap-0.5 ${
                       mainCategory === 'expenses'
                         ? 'bg-amber-100 border-amber-400 text-amber-950 font-bold shadow-2xs'
                         : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
-                    <Briefcase className="w-3.5 h-3.5 mx-auto mb-0.5 text-amber-700" />
-                    <span>1. Expenses</span>
+                    <Briefcase className="w-3.5 h-3.5 sm:mx-auto text-amber-700 shrink-0" />
+                    <span className="text-xs">1. Expenses</span>
                   </button>
                   <button
                     type="button"
@@ -338,14 +347,14 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                       setMainCategory('vendor_payments');
                       setCategory(VENDOR_PAYMENT_SUBCATEGORIES[0]);
                     }}
-                    className={`py-2 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                    className={`py-2 px-2.5 rounded-lg border text-center transition-all cursor-pointer flex sm:flex-col items-center justify-center gap-1.5 sm:gap-0.5 ${
                       mainCategory === 'vendor_payments'
                         ? 'bg-blue-100 border-blue-400 text-blue-950 font-bold shadow-2xs'
                         : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
-                    <Truck className="w-3.5 h-3.5 mx-auto mb-0.5 text-blue-700" />
-                    <span>2. Vendor Payments</span>
+                    <Truck className="w-3.5 h-3.5 sm:mx-auto text-blue-700 shrink-0" />
+                    <span className="text-xs">2. Vendor Payments</span>
                   </button>
                   <button
                     type="button"
@@ -353,14 +362,14 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                       setMainCategory('market_payments');
                       setCategory(MARKET_CREDITOR_SUBCATEGORIES[0]);
                     }}
-                    className={`py-2 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                    className={`py-2 px-2.5 rounded-lg border text-center transition-all cursor-pointer flex sm:flex-col items-center justify-center gap-1.5 sm:gap-0.5 ${
                       mainCategory === 'market_payments'
                         ? 'bg-purple-100 border-purple-400 text-purple-950 font-bold shadow-2xs'
                         : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
-                    <Store className="w-3.5 h-3.5 mx-auto mb-0.5 text-purple-700" />
-                    <span>3. Market (Creditor)</span>
+                    <Store className="w-3.5 h-3.5 sm:mx-auto text-purple-700 shrink-0" />
+                    <span className="text-xs">3. Market Creditors</span>
                   </button>
                 </div>
               </div>
@@ -608,25 +617,27 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             </label>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-3 border-t border-stone-200 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              id="btn-save-edit-transaction"
-              className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Changes</span>
-            </button>
-          </div>
         </form>
+
+        {/* Pinned Footer */}
+        <div className="shrink-0 p-3.5 sm:p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="form-edit-transaction"
+            id="btn-save-edit-transaction"
+            className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Changes</span>
+          </button>
+        </div>
       </div>
     </div>
   );

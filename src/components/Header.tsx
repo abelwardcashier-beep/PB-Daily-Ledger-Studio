@@ -260,30 +260,36 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Modal: Run Without Studio & PWA Installation Guide */}
       {isInstallModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex min-h-full items-center justify-center p-3 sm:p-4 md:p-6"
+          onClick={() => setIsInstallModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-lg sm:max-w-xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header (Pinned) */}
+            <div className="shrink-0 p-4 sm:p-5 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
                   <Smartphone className="w-4 h-4 text-amber-300" />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold">Run App Without Opening AI Studio</h3>
-                  <p className="text-xs text-emerald-200">Use standalone web link or install on desktop / mobile</p>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold truncate">Run App Without Opening AI Studio</h3>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 line-clamp-1">Use standalone web link or install on desktop / mobile</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsInstallModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+            {/* Modal Body (Scrollable) */}
+            <div className="p-4 sm:p-5 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
               
               {/* Option 1: Direct Link */}
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl">
@@ -374,8 +380,8 @@ export const Header: React.FC<HeaderProps> = ({
 
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex justify-end">
+            {/* Modal Footer (Pinned) */}
+            <div className="shrink-0 p-3.5 sm:p-4 bg-stone-50 border-t border-stone-200 flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsInstallModalOpen(false)}

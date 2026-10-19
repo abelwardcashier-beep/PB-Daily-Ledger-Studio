@@ -39,27 +39,27 @@ export const ClearConfirmModal: React.FC<ClearConfirmModalProps> = ({
   return (
     <div
       id="modal-clear-confirm"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 p-3 sm:p-4 md:p-6 flex min-h-full items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="clear-modal-title"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-stone-200 overflow-hidden transform transition-all"
+        className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-stone-200 overflow-hidden transform transition-all flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Banner */}
-        <div className="p-5 bg-rose-50/70 border-b border-rose-100 flex items-start justify-between">
-          <div className="flex items-center gap-3">
+        <div className="shrink-0 p-4 sm:p-5 bg-rose-50/70 border-b border-rose-100 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
               <Trash2 className="w-5 h-5" />
             </div>
-            <div>
-              <h3 id="clear-modal-title" className="text-base font-bold text-stone-900">
+            <div className="min-w-0">
+              <h3 id="clear-modal-title" className="text-sm sm:text-base font-bold text-stone-900 truncate">
                 Clear Ledger / Data Reset
               </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 line-clamp-1">
                 Permanently erase local records or perform a factory reset
               </p>
             </div>
@@ -67,15 +67,15 @@ export const ClearConfirmModal: React.FC<ClearConfirmModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-white/80 transition-colors cursor-pointer"
+            className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-white/80 transition-colors cursor-pointer shrink-0"
             title="Cancel and close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Current State Summary */}
-        <div className="p-5 space-y-3.5">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-5 space-y-3.5">
           {/* Helpful Reassurance & Start New Day Suggestion */}
           {onOpenStartNewDay && (
             <div className="p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl flex items-start gap-2.5 text-xs">
@@ -186,8 +186,8 @@ export const ClearConfirmModal: React.FC<ClearConfirmModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-3 bg-stone-50 border-t border-stone-200 flex justify-end">
+        {/* Footer (Pinned) */}
+        <div className="shrink-0 p-3 sm:p-3.5 bg-stone-50 border-t border-stone-200 flex justify-end">
           <button
             id="btn-cancel-clear-modal"
             type="button"

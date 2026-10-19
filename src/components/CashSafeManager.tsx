@@ -20,9 +20,25 @@ import {
   History,
   ArrowRight,
   User,
-  UserCheck
+  UserCheck,
+  Edit3,
+  X,
+  Download,
+  Search,
+  Filter,
+  ArrowUpDown,
+  Calendar,
+  Clock,
+  FileSpreadsheet
 } from 'lucide-react';
-import { VaultDeposit, VaultDepositCategory, Transaction } from '../types';
+import { 
+  VaultDeposit, 
+  VaultDepositCategory, 
+  Transaction, 
+  TransactionType, 
+  TransferSource, 
+  TransferDestination 
+} from '../types';
 import { formatPKR } from '../utils/exportSpreadsheet';
 
 interface CashSafeManagerProps {
@@ -52,6 +68,8 @@ interface CashSafeManagerProps {
   todayDrawerToSafeHandover?: number;
   rawPreTransferDrawerCash?: number;
   onDeleteTransaction?: (id: string) => void;
+  onUpdateTransaction?: (id: string, updates: Partial<Transaction>) => void;
+  onUpdateVaultDeposit?: (id: string, updates: Partial<VaultDeposit>) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onReconcileSafeBalance?: () => void;
 }
@@ -149,6 +167,8 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
   todayDrawerToSafeHandover = 0,
   rawPreTransferDrawerCash,
   onDeleteTransaction,
+  onUpdateTransaction,
+  onUpdateVaultDeposit,
   onShowToast,
   onReconcileSafeBalance
 }) => {
@@ -227,6 +247,224 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   });
   const [isDepositFormOpen, setIsDepositFormOpen] = useState<boolean>(false);
+
+  // Edit Safe Activity Modal State
+  const [editingSafeActivity, setEditingSafeActivity] = useState<Transaction | null>(null);
+  const [editActivityDirection, setEditActivityDirection] = useState<'drawer_to_safe' | 'safe_to_drawer' | 'safe_to_bank' | 'safe_to_person'>('drawer_to_safe');
+  const [editActivityAmount, setEditActivityAmount] = useState<string>('');
+  const [editActivityDate, setEditActivityDate] = useState<string>('');
+  const [editActivityTime, setEditActivityTime] = useState<string>('');
+  const [editActivityDescription, setEditActivityDescription] = useState<string>('');
+  const [editActivityRecipient, setEditActivityRecipient] = useState<string>('');
+  const [editActivityReceipt, setEditActivityReceipt] = useState<string>('');
+  const [editActivityNotes, setEditActivityNotes] = useState<string>('');
+
+  // Edit Vault Deposit Modal State
+  const [editingVaultDeposit, setEditingVaultDeposit] = useState<VaultDeposit | null>(null);
+  const [editDepositAmount, setEditDepositAmount] = useState<string>('');
+  const [editDepositCategory, setEditDepositCategory] = useState<VaultDepositCategory>('committee');
+  const [editDepositDate, setEditDepositDate] = useState<string>('');
+  const [editDepositTime, setEditDepositTime] = useState<string>('');
+  const [editDepositNotes, setEditDepositNotes] = useState<string>('');
+
+  const handleOpenEditActivity = (item: Transaction) => {
+    setEditingSafeActivity(item);
+    setEditActivityAmount(String(item.amount));
+    setEditActivityDate(item.date || selectedDate || new Date().toISOString().split('T')[0]);
+    setEditActivityTime(item.time || '12:00');
+    setEditActivityDescription(item.description || '');
+    setEditActivityRecipient(item.salesperson || '');
+    setEditActivityReceipt(item.receiptNumber || item.biltyNumber || '');
+    setEditActivityNotes(item.notes || '');
+
+    const isDrawerToSafe = item.transferDestination === 'safe' || (item.type === 'cash_out' && item.category?.includes('Safe') && item.transferDestination !== 'bank' && item.transferDestination !== 'individual');
+    const isSafeToDrawer = item.transferSource === 'safe' && item.type === 'cash_in';
+    const isSafeToBank = item.transferDestination === 'bank' || (item.category?.includes('Bank') && item.transferSource === 'safe');
+    const isSafeToPerson = item.transferDestination === 'individual' || (item.transferSource === 'safe' && (item.category?.includes('Individual') || item.description?.toLowerCase().includes('handover to') || item.description?.toLowerCase().includes('safe cash to')));
+
+    let dir: 'drawer_to_safe' | 'safe_to_drawer' | 'safe_to_bank' | 'safe_to_person' = 'drawer_to_safe';
+    if (isSafeToDrawer) dir = 'safe_to_drawer';
+    else if (isSafeToBank) dir = 'safe_to_bank';
+    else if (isSafeToPerson) dir = 'safe_to_person';
+    setEditActivityDirection(dir);
+  };
+
+  const handleQuickAdjustEditActivity = (delta: number) => {
+    const curr = parseFloat(editActivityAmount) || 0;
+    const next = Math.max(1, curr + delta);
+    setEditActivityAmount(String(next));
+  };
+
+  const handleSaveEditActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSafeActivity) return;
+    const amountNum = parseFloat(editActivityAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      onShowToast('Please enter a valid amount greater than 0.', 'error');
+      return;
+    }
+
+    let type: TransactionType = 'cash_out';
+    let transferSource: TransferSource = 'safe';
+    let transferDestination: TransferDestination = 'bank';
+    let category = 'Internal Transfer (Safe ➔ Bank)';
+
+    if (editActivityDirection === 'drawer_to_safe') {
+      type = 'cash_out';
+      transferSource = 'drawer';
+      transferDestination = 'safe';
+      category = 'Internal Transfer (Drawer ➔ Safe)';
+    } else if (editActivityDirection === 'safe_to_drawer') {
+      type = 'cash_in';
+      transferSource = 'safe';
+      transferDestination = 'drawer';
+      category = 'Safe Replenishment (Safe ➔ Drawer)';
+    } else if (editActivityDirection === 'safe_to_bank') {
+      type = 'cash_out';
+      transferSource = 'safe';
+      transferDestination = 'bank';
+      category = 'Internal Transfer (Safe ➔ Bank)';
+    } else if (editActivityDirection === 'safe_to_person') {
+      type = 'cash_out';
+      transferSource = 'safe';
+      transferDestination = 'individual';
+      category = 'Safe Transfer (Safe ➔ Individual)';
+    }
+
+    if (onUpdateTransaction) {
+      onUpdateTransaction(editingSafeActivity.id, {
+        amount: amountNum,
+        type,
+        transferSource,
+        transferDestination,
+        category,
+        isInternalTransfer: true,
+        date: editActivityDate.trim() || editingSafeActivity.date,
+        time: editActivityTime.trim() || editingSafeActivity.time,
+        description: editActivityDescription.trim() || editingSafeActivity.description,
+        salesperson: editActivityRecipient.trim() || editingSafeActivity.salesperson,
+        receiptNumber: editActivityReceipt.trim() || undefined,
+        notes: editActivityNotes.trim() || undefined
+      });
+      onShowToast(`Updated safe transaction to ${formatPKR(amountNum)}! Safe balance updated.`, 'success');
+    }
+
+    setEditingSafeActivity(null);
+  };
+
+  const handleOpenEditDeposit = (dep: VaultDeposit) => {
+    setEditingVaultDeposit(dep);
+    setEditDepositAmount(String(dep.amount));
+    setEditDepositCategory(dep.category);
+    setEditDepositDate(dep.date || selectedDate || new Date().toISOString().split('T')[0]);
+    setEditDepositTime(dep.time || '12:00');
+    setEditDepositNotes(dep.notes || '');
+  };
+
+  const handleSaveEditDeposit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVaultDeposit) return;
+    const amountNum = parseFloat(editDepositAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      onShowToast('Please enter a valid deposit amount greater than 0.', 'error');
+      return;
+    }
+    const catDef = VAULT_CATEGORIES.find(c => c.category === editDepositCategory) || VAULT_CATEGORIES[0];
+
+    if (onUpdateVaultDeposit) {
+      onUpdateVaultDeposit(editingVaultDeposit.id, {
+        amount: amountNum,
+        category: editDepositCategory,
+        categoryLabel: catDef.label,
+        date: editDepositDate.trim() || editingVaultDeposit.date,
+        time: editDepositTime.trim() || editingVaultDeposit.time,
+        notes: editDepositNotes.trim() || undefined
+      });
+      onShowToast(`Updated vault deposit (${catDef.label}) to ${formatPKR(amountNum)}!`, 'success');
+    }
+
+    setEditingVaultDeposit(null);
+  };
+
+  // Baseline Reserve Edit Modal State
+  const [isEditingBaselineModalOpen, setIsEditingBaselineModalOpen] = useState<boolean>(false);
+  const [editBaselineAmount, setEditBaselineAmount] = useState<string>('');
+  const [editBaselineDate, setEditBaselineDate] = useState<string>('');
+  const [editBaselineTime, setEditBaselineTime] = useState<string>('');
+
+  const handleOpenEditBaseline = () => {
+    setEditBaselineAmount(String(safeRunningBalance));
+    setEditBaselineDate(balanceDateInput || safeRunningBalanceDate || selectedDate || new Date().toISOString().split('T')[0]);
+    setEditBaselineTime(safeRunningBalanceTime || '09:00');
+    setIsEditingBaselineModalOpen(true);
+  };
+
+  const handleSaveBaselineEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(editBaselineAmount);
+    if (isNaN(amt) || amt < 0) {
+      onShowToast('Please enter a valid baseline amount (0 or greater).', 'error');
+      return;
+    }
+    const dateStr = editBaselineDate.trim() || selectedDate;
+    const timeStr = editBaselineTime.trim() || '09:00';
+    onChangeSafeRunningBalance(amt, dateStr, timeStr);
+    if (onChangeSafeRunningBalanceDate) {
+      onChangeSafeRunningBalanceDate(dateStr);
+    }
+    setBalanceDateInput(dateStr);
+    setRunningInput(String(amt));
+    setIsEditingBaselineModalOpen(false);
+    onShowToast(`Vault baseline reserve updated to ${formatPKR(amt)}!`, 'success');
+  };
+
+  // Safe Vault Accounting Ledger Filter & Sort States
+  const [ledgerFlowFilter, setLedgerFlowFilter] = useState<'all' | 'inflow' | 'outflow'>('all');
+  const [ledgerDateFilter, setLedgerDateFilter] = useState<'all' | 'today'>('all');
+  const [ledgerSortOrder, setLedgerSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  const handleExportVaultLedgerCSV = (items: Array<any>) => {
+    if (!items || items.length === 0) {
+      onShowToast('No ledger entries available to export.', 'info');
+      return;
+    }
+    const headers = [
+      'Date',
+      'Time',
+      'Particulars / Description',
+      'Flow Type',
+      'Category / Channel',
+      'Cash-In (Sent to Vault PKR)',
+      'Cash-Out (Came Out of Vault PKR)',
+      'Running Balance (PKR)',
+      'Party / Staff / Bank',
+      'Receipt #',
+      'Notes'
+    ];
+    const rows = items.map(item => [
+      `"${item.date}"`,
+      `"${item.time}"`,
+      `"${(item.description || '').replace(/"/g, '""')}"`,
+      `"${item.direction === 'inflow' ? 'Cash-In (Sent to Vault)' : 'Cash-Out (Came Out of Vault)'}"`,
+      `"${(item.categoryLabel || '').replace(/"/g, '""')}"`,
+      item.cashIn > 0 ? item.cashIn : 0,
+      item.cashOut > 0 ? item.cashOut : 0,
+      item.runningBalance,
+      `"${(item.recipientOrSource || '').replace(/"/g, '""')}"`,
+      `"${(item.receiptNumber || '').replace(/"/g, '""')}"`,
+      `"${(item.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `safe_vault_ledger_${selectedDate || 'all'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    onShowToast('Vault Ledger exported to CSV successfully!', 'success');
+  };
 
   React.useEffect(() => {
     if (selectedDate) {
@@ -550,72 +788,308 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
     setDepositAmount(String(current + val));
   };
 
-  // Filter all transfers in/out of the safe for the activity log, with search support
-  const safeActivities = React.useMemo(() => {
-    let list = (transactions || []).filter(t => 
-      t.isInternalTransfer ||
-      t.transferSource === 'safe' ||
-      t.transferDestination === 'safe' ||
-      t.transferDestination === 'individual' ||
-      t.transferDestination === 'bank' ||
-      (t.category && (
-        t.category.toLowerCase().includes('safe') || 
-        t.category.toLowerCase().includes('internal transfer') ||
-        t.category.toLowerCase().includes('individual')
-      )) ||
-      (t.description && (
-        t.description.toLowerCase().includes('handover to') ||
-        t.description.toLowerCase().includes('safe cash to') ||
-        t.description.toLowerCase().includes('safe to individual') ||
-        t.description.toLowerCase().includes('safe ➔')
-      ))
-    );
+  // Unified Vault Accounting Ledger computation: Cash-In, Cash-Out, and Chronological Running Balance
+  const vaultLedgerData = React.useMemo(() => {
+    const rawItems: Array<{
+      id: string;
+      sourceType: 'transfer' | 'deposit' | 'baseline';
+      date: string;
+      time: string;
+      description: string;
+      direction: 'inflow' | 'outflow';
+      categoryLabel: string;
+      badgeStyle: string;
+      recipientOrSource?: string;
+      receiptNumber?: string;
+      notes?: string;
+      cashIn: number;
+      cashOut: number;
+      runningBalance: number;
+      rawTransaction?: Transaction;
+      rawVaultDeposit?: VaultDeposit;
+      isEditable: boolean;
+    }> = [];
 
-    // Also include daily drawer handovers from settings (which are safely kept out of Cash Out / Expenses)
+    // 1. Baseline safe reserve
+    if (safeRunningBalance > 0) {
+      rawItems.push({
+        id: 'baseline_reserve',
+        sourceType: 'baseline',
+        date: balanceDateInput || safeRunningBalanceDate || '2026-10-15',
+        time: safeRunningBalanceTime || '08:00',
+        description: 'Vault Baseline Starting Cash Reserve',
+        direction: 'inflow',
+        categoryLabel: 'Vault Baseline Reserve',
+        badgeStyle: 'bg-amber-100 text-amber-950 border-amber-300 font-bold',
+        recipientOrSource: 'Safe Starting Reserve',
+        notes: 'Initial opening safe float stored in the vault',
+        cashIn: safeRunningBalance,
+        cashOut: 0,
+        runningBalance: 0,
+        isEditable: true
+      });
+    }
+
+    // 2. Transfers from transactions
+    (transactions || []).forEach(item => {
+      const isDrawerToSafe = item.transferDestination === 'safe' || (item.type === 'cash_out' && item.category?.includes('Safe') && item.transferDestination !== 'bank' && item.transferDestination !== 'individual');
+      const isSafeToDrawer = item.transferSource === 'safe' && item.type === 'cash_in';
+      const isSafeToBank = item.transferDestination === 'bank' || (item.category?.includes('Bank') && item.transferSource === 'safe');
+      const isSafeToPerson = item.transferDestination === 'individual' || (item.transferSource === 'safe' && (item.category?.includes('Individual') || item.description?.toLowerCase().includes('handover to') || item.description?.toLowerCase().includes('safe cash to')));
+
+      const isRelevant = isDrawerToSafe || isSafeToDrawer || isSafeToBank || isSafeToPerson ||
+        item.isInternalTransfer ||
+        item.transferSource === 'safe' ||
+        item.transferDestination === 'safe' ||
+        item.transferDestination === 'individual' ||
+        item.transferDestination === 'bank' ||
+        (item.category && item.category.toLowerCase().includes('safe'));
+
+      if (!isRelevant) return;
+
+      const amt = typeof item.amount === 'number' ? item.amount : (parseFloat(String(item.amount)) || 0);
+
+      if (isDrawerToSafe) {
+        rawItems.push({
+          id: item.id,
+          sourceType: 'transfer',
+          date: item.date || selectedDate,
+          time: item.time || '20:00',
+          description: item.description || 'Day-End Cash Handover to Safe',
+          direction: 'inflow',
+          categoryLabel: 'Drawer ➔ Safe Handover',
+          badgeStyle: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          recipientOrSource: item.salesperson || 'Register Drawer',
+          receiptNumber: item.receiptNumber || item.biltyNumber,
+          notes: item.notes,
+          cashIn: amt,
+          cashOut: 0,
+          runningBalance: 0,
+          rawTransaction: item,
+          isEditable: true
+        });
+      } else if (isSafeToDrawer) {
+        rawItems.push({
+          id: item.id,
+          sourceType: 'transfer',
+          date: item.date || selectedDate,
+          time: item.time || '09:00',
+          description: item.description || 'Morning Float Replenishment',
+          direction: 'outflow',
+          categoryLabel: 'Safe ➔ Drawer Replenish',
+          badgeStyle: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+          recipientOrSource: 'Register Drawer',
+          receiptNumber: item.receiptNumber || item.biltyNumber,
+          notes: item.notes,
+          cashIn: 0,
+          cashOut: amt,
+          runningBalance: 0,
+          rawTransaction: item,
+          isEditable: true
+        });
+      } else if (isSafeToBank) {
+        rawItems.push({
+          id: item.id,
+          sourceType: 'transfer',
+          date: item.date || selectedDate,
+          time: item.time || '14:00',
+          description: item.description || 'Cash Deposit from Safe Vault into Bank',
+          direction: 'outflow',
+          categoryLabel: 'Safe ➔ Bank Deposit',
+          badgeStyle: 'bg-blue-100 text-blue-900 border-blue-300',
+          recipientOrSource: item.salesperson || 'Bank Account',
+          receiptNumber: item.receiptNumber || item.biltyNumber,
+          notes: item.notes,
+          cashIn: 0,
+          cashOut: amt,
+          runningBalance: 0,
+          rawTransaction: item,
+          isEditable: true
+        });
+      } else if (isSafeToPerson) {
+        rawItems.push({
+          id: item.id,
+          sourceType: 'transfer',
+          date: item.date || selectedDate,
+          time: item.time || '16:00',
+          description: item.description || `Cash Handover to ${item.salesperson || 'Individual'}`,
+          direction: 'outflow',
+          categoryLabel: `Safe ➔ ${item.salesperson || 'Individual'}`,
+          badgeStyle: 'bg-purple-100 text-purple-900 border-purple-300',
+          recipientOrSource: item.salesperson || 'Individual',
+          receiptNumber: item.receiptNumber || item.biltyNumber,
+          notes: item.notes,
+          cashIn: 0,
+          cashOut: amt,
+          runningBalance: 0,
+          rawTransaction: item,
+          isEditable: true
+        });
+      }
+    });
+
+    // 3. Daily drawer handovers from settings (if not already present in transactions)
     if (dailyDrawerHandovers) {
-      Object.entries(dailyDrawerHandovers).forEach(([date, amt]) => {
+      Object.entries(dailyDrawerHandovers).forEach(([dDate, amt]) => {
         if (amt > 0) {
-          const alreadyPresent = list.some(t => t.date === date && t.amount === amt && t.transferDestination === 'safe');
-          if (!alreadyPresent) {
-            list.push({
-              id: `handover_${date}`,
-              date,
+          const sumExistingOnDate = rawItems
+            .filter(t => t.date === dDate && t.categoryLabel.includes('Drawer ➔ Safe'))
+            .reduce((sum, it) => sum + it.cashIn, 0);
+          const remainingHandover = amt - sumExistingOnDate;
+          if (remainingHandover > 0) {
+            const syntheticTx: Transaction = {
+              id: `handover_${dDate}`,
+              date: dDate,
               time: '20:00',
               type: 'cash_in',
-              amount: amt,
+              amount: remainingHandover,
               description: 'Day-End Cash Handover to Safe',
               category: 'Internal Transfer (Drawer ➔ Safe)',
               isInternalTransfer: true,
               transferSource: 'drawer',
               transferDestination: 'safe',
               salesperson: 'Drawer ➔ Safe',
-              createdAt: new Date(date).getTime() || 0,
+              createdAt: new Date(dDate).getTime() || 0,
               verified: true,
               notes: 'Evening cash handover into safe vault (Stored in Vault; not an expense).'
+            };
+            rawItems.push({
+              id: `handover_${dDate}`,
+              sourceType: 'transfer',
+              date: dDate,
+              time: '20:00',
+              description: 'Day-End Cash Handover to Safe',
+              direction: 'inflow',
+              categoryLabel: 'Drawer ➔ Safe Handover',
+              badgeStyle: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+              recipientOrSource: 'Register Drawer',
+              notes: 'Evening cash handover into safe vault',
+              cashIn: remainingHandover,
+              cashOut: 0,
+              runningBalance: 0,
+              rawTransaction: syntheticTx,
+              isEditable: true
             });
           }
         }
       });
     }
 
-    list.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+    // 4. Vault deposits (Committee, Capital, Bank Withdrawal, etc.)
+    (vaultDeposits || []).filter(dep => !dep.isConsolidated).forEach(dep => {
+      rawItems.push({
+        id: dep.id,
+        sourceType: 'deposit',
+        date: dep.date || selectedDate,
+        time: dep.time || '12:00',
+        description: dep.notes ? `${dep.categoryLabel || 'Vault Deposit'}: ${dep.notes}` : (dep.categoryLabel || 'Direct Vault Cash Deposit'),
+        direction: 'inflow',
+        categoryLabel: dep.categoryLabel || 'Direct Vault Deposit',
+        badgeStyle: 'bg-amber-100 text-amber-900 border-amber-300',
+        recipientOrSource: 'External Injection',
+        notes: dep.notes,
+        cashIn: typeof dep.amount === 'number' ? dep.amount : (parseFloat(String(dep.amount)) || 0),
+        cashOut: 0,
+        runningBalance: 0,
+        rawVaultDeposit: dep,
+        isEditable: true
+      });
+    });
+
+    // Sort chronologically ascending to calculate progressive running balance accurately
+    rawItems.sort((a, b) => {
+      const dComp = (a.date || '').localeCompare(b.date || '');
+      if (dComp !== 0) return dComp;
+      const tComp = (a.time || '').localeCompare(b.time || '');
+      if (tComp !== 0) return tComp;
+      return (a.id || '').localeCompare(b.id || '');
+    });
+
+    let progressive = 0;
+    for (const item of rawItems) {
+      if (item.direction === 'inflow') {
+        progressive += item.cashIn;
+      } else {
+        progressive -= item.cashOut;
+      }
+      item.runningBalance = progressive;
+    }
+
+    const totalSent = rawItems.reduce((acc, it) => acc + it.cashIn, 0);
+    const totalCameOut = rawItems.reduce((acc, it) => acc + it.cashOut, 0);
+    const netBalance = totalSent - totalCameOut;
+
+    // Apply User Filters
+    let filtered = [...rawItems];
+
+    if (ledgerFlowFilter === 'inflow') {
+      filtered = filtered.filter(item => item.direction === 'inflow');
+    } else if (ledgerFlowFilter === 'outflow') {
+      filtered = filtered.filter(item => item.direction === 'outflow');
+    }
+
+    if (ledgerDateFilter === 'today') {
+      filtered = filtered.filter(item => item.date === selectedDate);
+    }
 
     if (safeSearchQuery.trim()) {
       const q = safeSearchQuery.trim().toLowerCase().replace(/,/g, '');
-      list = list.filter(t => {
-        const amtStr = String(t.amount).replace(/,/g, '');
-        return amtStr.includes(q) ||
-          (t.date && t.date.toLowerCase().includes(q)) ||
-          (t.time && t.time.toLowerCase().includes(q)) ||
-          (t.description && t.description.toLowerCase().includes(q)) ||
-          (t.notes && t.notes.toLowerCase().includes(q)) ||
-          (t.salesperson && t.salesperson.toLowerCase().includes(q)) ||
-          (t.category && t.category.toLowerCase().includes(q));
+      filtered = filtered.filter(item => {
+        const inStr = String(item.cashIn).replace(/,/g, '');
+        const outStr = String(item.cashOut).replace(/,/g, '');
+        const balStr = String(item.runningBalance).replace(/,/g, '');
+        return inStr.includes(q) ||
+          outStr.includes(q) ||
+          balStr.includes(q) ||
+          (item.date && item.date.toLowerCase().includes(q)) ||
+          (item.time && item.time.toLowerCase().includes(q)) ||
+          (item.description && item.description.toLowerCase().includes(q)) ||
+          (item.categoryLabel && item.categoryLabel.toLowerCase().includes(q)) ||
+          (item.recipientOrSource && item.recipientOrSource.toLowerCase().includes(q)) ||
+          (item.receiptNumber && item.receiptNumber.toLowerCase().includes(q)) ||
+          (item.notes && item.notes.toLowerCase().includes(q));
       });
     }
 
-    return list;
-  }, [transactions, dailyDrawerHandovers, safeSearchQuery]);
+    if (ledgerSortOrder === 'desc') {
+      filtered = [...filtered].reverse();
+    }
+
+    return {
+      allLedgerItems: rawItems,
+      filteredLedgerItems: filtered,
+      totalSentToVault: totalSent,
+      totalCameOutOfVault: totalCameOut,
+      netVaultLedgerBalance: netBalance
+    };
+  }, [safeRunningBalance, safeRunningBalanceDate, safeRunningBalanceTime, balanceDateInput, transactions, dailyDrawerHandovers, vaultDeposits, selectedDate, ledgerFlowFilter, ledgerDateFilter, safeSearchQuery, ledgerSortOrder]);
+
+  const { filteredLedgerItems, totalSentToVault, totalCameOutOfVault, netVaultLedgerBalance } = vaultLedgerData;
+
+  const handleEditLedgerItem = (item: (typeof filteredLedgerItems)[0]) => {
+    if (item.sourceType === 'baseline') {
+      handleOpenEditBaseline();
+    } else if (item.sourceType === 'deposit' && item.rawVaultDeposit) {
+      handleOpenEditDeposit(item.rawVaultDeposit);
+    } else if (item.sourceType === 'transfer' && item.rawTransaction) {
+      handleOpenEditActivity(item.rawTransaction);
+    }
+  };
+
+  const handleDeleteLedgerItem = (item: (typeof filteredLedgerItems)[0]) => {
+    if (item.sourceType === 'baseline') {
+      handleClearRunning();
+      onShowToast('Vault baseline starting cash reserve cleared to Rs. 0', 'info');
+    } else if (item.sourceType === 'deposit') {
+      onDeleteVaultDeposit(item.id);
+      onShowToast(`Removed vault deposit of ${formatPKR(item.cashIn)}.`, 'info');
+    } else if (item.sourceType === 'transfer') {
+      if (onDeleteTransaction) {
+        onDeleteTransaction(item.id);
+        onShowToast(`Reversed transfer of ${formatPKR(item.cashIn || item.cashOut)} and updated balances.`, 'info');
+      }
+    }
+  };
 
   // Finalize / Commit transfer into safe balance
   const handleFinalizeTransfer = () => {
@@ -770,17 +1244,28 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Safe Running Balance</span>
               </label>
-              {safeRunningBalance > 0 && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleClearRunning}
-                  className="text-[11px] text-stone-400 hover:text-rose-600 transition-colors flex items-center gap-0.5 cursor-pointer"
-                  title="Clear safe running balance"
+                  onClick={handleOpenEditBaseline}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5 cursor-pointer font-semibold"
+                  title="Edit baseline amount and date/time in modal"
                 >
-                  <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset</span>
+                  <Edit3 className="w-2.5 h-2.5" />
+                  <span>Edit</span>
                 </button>
-              )}
+                {safeRunningBalance > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearRunning}
+                    className="text-[11px] text-stone-400 hover:text-rose-600 transition-colors flex items-center gap-0.5 cursor-pointer"
+                    title="Clear safe running balance"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <p className="text-[11px] text-stone-500 mb-2.5 leading-relaxed">
@@ -1677,187 +2162,481 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
 
       </div>
 
-      {/* LIVE SAFE TRANSFERS & ACTIVITY AUDIT TRAIL */}
-      <div className="mb-5 bg-stone-50/80 border border-stone-200/90 rounded-xl p-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-2.5 border-b border-stone-200/80 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700">
-              <History className="w-4 h-4" />
+      {/* UNIFIED SAFE VAULT ACCOUNTING LEDGER VIEW */}
+      <div className="mb-5 bg-stone-50/80 border border-stone-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs">
+        {/* Ledger Section Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-stone-200/80 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-slate-800 text-amber-400 shrink-0 shadow-2xs">
+              <History className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
-                  Safe In/Out Transfer Activity Log
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm sm:text-base font-extrabold text-stone-900 tracking-tight">
+                  Safe Vault Accounting Ledger
                 </h4>
-                <span className="text-[10px] font-mono font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                  {safeActivities.length} {safeActivities.length === 1 ? 'record' : 'records'}
+                <span className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-800 bg-slate-200/80 border border-slate-300 px-2 py-0.5 rounded-md">
+                  {filteredLedgerItems.length} {filteredLedgerItems.length === 1 ? 'entry' : 'entries'}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                  Cash-In • Cash-Out • Running Balance
                 </span>
               </div>
-              <p className="text-[11px] text-stone-500">
-                Audit trail of transfers between Register Drawer, Safe Vault, and Bank Accounts.
+              <p className="text-xs text-stone-500 mt-0.5">
+                Complete chronological audit of cash sent into the safe vault and disbursements taken out of the vault. Every entry is editable.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs flex-wrap">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search audit (e.g. 2195000)..."
-                value={safeSearchQuery}
-                onChange={e => setSafeSearchQuery(e.target.value)}
-                className="pl-2.5 pr-6 py-1 bg-white border border-stone-300 rounded-lg text-xs text-stone-800 placeholder-stone-400 outline-hidden w-44 sm:w-52 font-mono shadow-2xs focus:border-indigo-600"
-              />
-              {safeSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSafeSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <span className="text-stone-500 text-[11px]">Vault Status:</span>
-            <span className="font-mono font-bold text-stone-800 bg-white px-2 py-1 rounded border border-stone-200 text-xs shadow-2xs">
-              Base: {formatPKR(safeRunningBalance)}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => handleExportVaultLedgerCSV(filteredLedgerItems)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-stone-100 border border-stone-300 text-stone-700 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+              title="Download entire vault ledger as CSV spreadsheet"
+            >
+              <Download className="w-3.5 h-3.5 text-stone-600" />
+              <span>Export Ledger CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDepositFormOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+              title="Record an external deposit directly into the safe vault"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add Vault Cash</span>
+            </button>
           </div>
         </div>
 
-        {/* Highlight matching Vault Baseline if searched */}
-        {safeSearchQuery && String(safeRunningBalance).includes(safeSearchQuery.replace(/,/g, '')) && (
-          <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs mb-2.5 animate-in fade-in">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="p-2 rounded-lg bg-amber-200 text-amber-900 shrink-0">
-                <ShieldCheck className="w-4 h-4 text-amber-800" />
+        {/* Ledger Top KPI Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-4">
+          {/* Card 1: Cash-In (Sent to Vault) */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-white border border-emerald-200/80 shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-800 flex items-center gap-1">
+                <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Cash-In (Sent to Vault)</span>
+              </span>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-emerald-700 mt-1">
+                +{formatPKR(totalSentToVault)}
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-200/90 text-amber-950 border border-amber-300">
-                    Vault Running Base
-                  </span>
-                  <span className="text-[11px] font-mono text-amber-950 font-bold bg-white/80 border border-amber-200 px-2 py-0.5 rounded">
-                    📅 Added / Effective: {balanceDateInput || safeRunningBalanceDate || selectedDate} {safeRunningBalanceTime ? `at ${safeRunningBalanceTime}` : ''}
-                  </span>
-                </div>
-                <p className="text-xs text-stone-800 mt-0.5 font-medium">
-                  Stored baseline cash balance in the safe vault matching your search.
-                </p>
-              </div>
+              <span className="text-[10px] text-stone-400 mt-0.5 block">
+                Total inflows from drawers &amp; deposits
+              </span>
             </div>
-            <span className="text-base font-extrabold font-mono text-amber-950 shrink-0">
-              {formatPKR(safeRunningBalance)}
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/70 shrink-0">
+              <Lock className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Card 2: Cash-Out (Came Out of Vault) */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-white border border-rose-200/80 shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-rose-800 flex items-center gap-1">
+                <ArrowUpRight className="w-3.5 h-3.5 text-rose-600" />
+                <span>Cash-Out (Came Out of Vault)</span>
+              </span>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-rose-700 mt-1">
+                -{formatPKR(totalCameOutOfVault)}
+              </div>
+              <span className="text-[10px] text-stone-400 mt-0.5 block">
+                Bank deposits, float replenishments &amp; drawings
+              </span>
+            </div>
+            <div className="p-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200/70 shrink-0">
+              <Landmark className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Card 3: Vault Running Balance */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-slate-900 text-white shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-300 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>Vault Running Balance</span>
+              </span>
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-amber-400 mt-1">
+                {formatPKR(netVaultLedgerBalance)}
+              </div>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                Live net cash residing in vault
+              </span>
+            </div>
+            <div className="p-2 rounded-lg bg-slate-800 text-amber-400 border border-slate-700 shrink-0">
+              <Wallet className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Ledger Filter & Search Toolbar */}
+        <div className="bg-white border border-stone-200 rounded-xl p-3 mb-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-2xs">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400">
+              <Search className="w-3.5 h-3.5" />
             </span>
+            <input
+              type="text"
+              placeholder="Search by date (2026-10-18), amount, description, person, bank..."
+              value={safeSearchQuery}
+              onChange={e => setSafeSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-7 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-800 placeholder-stone-400 outline-hidden focus:bg-white focus:border-indigo-600 transition-all font-mono"
+            />
+            {safeSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setSafeSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs cursor-pointer"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Interactive Filters */}
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            {/* Flow Filter: All vs Inflows vs Outflows */}
+            <div className="flex items-center p-0.5 bg-stone-100 rounded-lg border border-stone-200 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setLedgerFlowFilter('all')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  ledgerFlowFilter === 'all'
+                    ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                All Movements
+              </button>
+              <button
+                type="button"
+                onClick={() => setLedgerFlowFilter('inflow')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                  ledgerFlowFilter === 'inflow'
+                    ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                    : 'text-emerald-800 hover:text-emerald-950'
+                }`}
+              >
+                <ArrowDownToLine className="w-3 h-3" />
+                <span>Cash-In</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLedgerFlowFilter('outflow')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                  ledgerFlowFilter === 'outflow'
+                    ? 'bg-rose-600 text-white shadow-2xs font-bold'
+                    : 'text-rose-800 hover:text-rose-950'
+                }`}
+              >
+                <ArrowUpRight className="w-3 h-3" />
+                <span>Cash-Out</span>
+              </button>
+            </div>
+
+            {/* Date Scope Filter */}
+            <div className="flex items-center p-0.5 bg-stone-100 rounded-lg border border-stone-200 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setLedgerDateFilter('all')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  ledgerDateFilter === 'all'
+                    ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                All Dates
+              </button>
+              <button
+                type="button"
+                onClick={() => setLedgerDateFilter('today')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  ledgerDateFilter === 'today'
+                    ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Today Only
+              </button>
+            </div>
+
+            {/* Sort Toggle */}
+            <button
+              type="button"
+              onClick={() => setLedgerSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg text-[11px] font-bold text-stone-700 transition-colors cursor-pointer shadow-2xs"
+              title="Toggle chronological order (Newest first vs Oldest first)"
+            >
+              <ArrowUpDown className="w-3 h-3 text-stone-500" />
+              <span>{ledgerSortOrder === 'desc' ? 'Newest First' : 'Oldest First'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Unfinalized transfer alert if pending in container 2 */}
+        {safeTransferAmount > 0 && (
+          <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-900 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                <strong>Pending Drawer Transfer:</strong> Rs. {formatPKR(safeTransferAmount)} is staged in Container 2. Click <strong>Finalize Drawer Transfer</strong> above to record it permanently in this ledger.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFinalizeTransfer}
+              className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold shrink-0 cursor-pointer shadow-2xs transition-colors"
+            >
+              Finalize Now
+            </button>
           </div>
         )}
 
-        {safeActivities.length > 0 ? (
-          <div className="space-y-2">
-            {safeActivities.map(item => {
-              const isDrawerToSafe = item.transferDestination === 'safe' || item.type === 'cash_out' && item.category?.includes('Safe') && item.transferDestination !== 'bank' && item.transferDestination !== 'individual';
-              const isSafeToDrawer = item.transferSource === 'safe' && item.type === 'cash_in';
-              const isSafeToBank = item.transferDestination === 'bank' || item.category?.includes('Bank') && item.transferSource === 'safe';
-              const isSafeToPerson = item.transferDestination === 'individual' || (item.transferSource === 'safe' && (item.category?.includes('Individual') || item.description?.toLowerCase().includes('handover to') || item.description?.toLowerCase().includes('safe cash to')));
+        {/* LEDGER SPREADSHEET TABLE */}
+        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-2xs">
+          <table className="w-full text-left text-xs border-collapse min-w-[760px]">
+            {/* Table Header */}
+            <thead>
+              <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 text-[11px] uppercase tracking-wider font-extrabold select-none">
+                <th className="py-2.5 px-3 w-36">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Date &amp; Time</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-3 min-w-[220px]">
+                  <span>Particulars / Transaction &amp; Flow</span>
+                </th>
+                <th className="py-2.5 px-3 w-40">
+                  <span>Source / Counterparty</span>
+                </th>
+                <th className="py-2.5 px-3 text-right w-36 bg-emerald-50/50 text-emerald-950 font-bold border-l border-emerald-100">
+                  <div className="flex items-center justify-end gap-1">
+                    <ArrowDownToLine className="w-3 h-3 text-emerald-600" />
+                    <span>Cash-In (Sent)</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-3 text-right w-36 bg-rose-50/50 text-rose-950 font-bold border-l border-rose-100">
+                  <div className="flex items-center justify-end gap-1">
+                    <ArrowUpRight className="w-3 h-3 text-rose-600" />
+                    <span>Cash-Out (Came Out)</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-3 text-right w-40 bg-slate-100 text-slate-900 font-extrabold border-l border-slate-200">
+                  <div className="flex items-center justify-end gap-1">
+                    <Lock className="w-3 h-3 text-slate-600" />
+                    <span>Vault Running Bal</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-3 text-center w-24 border-l border-stone-200">
+                  <span>Actions</span>
+                </th>
+              </tr>
+            </thead>
 
-              let badgeStyle = 'bg-stone-100 text-stone-800 border-stone-200';
-              let badgeLabel = 'Transfer';
-              let IconComp = Lock;
-              let directionText = 'Safe Movement';
-              let amountColor = 'text-stone-900';
-              let sign = '';
+            {/* Table Body */}
+            <tbody className="divide-y divide-stone-100">
+              {filteredLedgerItems.length > 0 ? (
+                filteredLedgerItems.map((item, idx) => {
+                  const isInflow = item.direction === 'inflow';
+                  const isToday = item.date === selectedDate;
+                  const isBaseline = item.sourceType === 'baseline';
 
-              if (isDrawerToSafe) {
-                badgeStyle = 'bg-emerald-100 text-emerald-900 border-emerald-300';
-                badgeLabel = 'Drawer ➔ Safe Handover';
-                IconComp = ArrowDownToLine;
-                directionText = 'Inflow to Safe (Debited from Drawer Register)';
-                amountColor = 'text-emerald-700';
-                sign = '+';
-              } else if (isSafeToDrawer) {
-                badgeStyle = 'bg-indigo-100 text-indigo-900 border-indigo-300';
-                badgeLabel = 'Safe ➔ Drawer Replenish';
-                IconComp = ArrowUpRight;
-                directionText = 'Outflow from Safe (Credited into Drawer Register)';
-                amountColor = 'text-indigo-700';
-                sign = '-';
-              } else if (isSafeToBank) {
-                badgeStyle = 'bg-blue-100 text-blue-900 border-blue-300';
-                badgeLabel = 'Safe ➔ Bank Deposit';
-                IconComp = Landmark;
-                directionText = 'Outflow from Safe (Deposited into Bank Account)';
-                amountColor = 'text-blue-700';
-                sign = '-';
-              } else if (isSafeToPerson) {
-                badgeStyle = 'bg-purple-100 text-purple-900 border-purple-300';
-                badgeLabel = `Safe ➔ ${item.salesperson || 'Individual'}`;
-                IconComp = User;
-                directionText = `Outflow from Safe (Handed over to ${item.salesperson || 'Individual'})`;
-                amountColor = 'text-purple-700';
-                sign = '-';
-              }
-
-              return (
-                <div 
-                  key={item.id}
-                  className="bg-white border border-stone-200 rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs hover:border-stone-300 transition-colors"
-                >
-                  <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                    <div className="p-1.5 rounded-md bg-stone-50 border border-stone-200 shrink-0 mt-0.5 sm:mt-0">
-                      <IconComp className="w-3.5 h-3.5 text-stone-700" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle}`}>
-                          {badgeLabel}
-                        </span>
-                        <span className="text-[11px] font-mono text-stone-400">
-                          {item.date} • {item.time}
-                        </span>
-                        {(item.receiptNumber || item.biltyNumber) && (
-                          <span className="text-[10px] bg-stone-100 text-stone-700 px-1 rounded font-mono font-semibold">
-                            Receipt #{item.receiptNumber || item.biltyNumber}
+                  return (
+                    <tr 
+                      key={item.id + '_' + idx}
+                      className={`hover:bg-indigo-50/30 transition-colors ${
+                        isBaseline ? 'bg-amber-50/30 font-medium' : idx % 2 === 0 ? 'bg-white' : 'bg-stone-50/30'
+                      }`}
+                    >
+                      {/* Date & Time */}
+                      <td className="py-2.5 px-3 align-top whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-mono font-bold text-stone-900 flex items-center gap-1.5">
+                            <span>{item.date}</span>
+                            {isToday && (
+                              <span className="text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-sans">
+                                Today
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-semibold text-stone-800 truncate mt-0.5">
-                        {item.description}
-                      </p>
-                      <p className="text-[10px] text-stone-400">
-                        {directionText}
-                      </p>
-                    </div>
-                  </div>
+                          <span className="text-[11px] font-mono text-stone-400 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-stone-400" />
+                            <span>{item.time}</span>
+                          </span>
+                        </div>
+                      </td>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
-                    <div className="text-right">
-                      <span className={`text-sm font-extrabold font-mono ${amountColor}`}>
-                        {sign}{formatPKR(item.amount)}
-                      </span>
+                      {/* Particulars & Transfer Flow */}
+                      <td className="py-2.5 px-3 align-top min-w-0">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Direction Badge */}
+                            <span 
+                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${
+                                isInflow 
+                                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300' 
+                                  : 'bg-rose-50 text-rose-900 border-rose-300'
+                              }`}
+                            >
+                              {isInflow ? <ArrowDownToLine className="w-3 h-3 text-emerald-600" /> : <ArrowUpRight className="w-3 h-3 text-rose-600" />}
+                              <span>{isInflow ? 'Sent to Vault' : 'Came Out of Vault'}</span>
+                            </span>
+
+                            {/* Category Label */}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.badgeStyle}`}>
+                              {item.categoryLabel}
+                            </span>
+
+                            {/* Receipt Number */}
+                            {item.receiptNumber && (
+                              <span className="text-[10px] font-mono font-semibold bg-stone-100 text-stone-700 px-1.5 py-0.5 rounded border border-stone-200">
+                                #{item.receiptNumber}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Description text */}
+                          <p className="text-xs font-bold text-stone-800 leading-snug">
+                            {item.description}
+                          </p>
+
+                          {/* Notes */}
+                          {item.notes && item.notes !== item.description && (
+                            <p className="text-[11px] text-stone-500 italic leading-snug">
+                              &ldquo;{item.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Source / Counterparty */}
+                      <td className="py-2.5 px-3 align-top whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-stone-700 font-semibold text-xs">
+                          {item.categoryLabel.includes('Bank') ? (
+                            <Landmark className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          ) : item.categoryLabel.includes('Individual') || item.categoryLabel.includes('Person') ? (
+                            <User className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          ) : item.categoryLabel.includes('Drawer') ? (
+                            <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          ) : (
+                            <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          )}
+                          <span className="truncate max-w-[130px]">
+                            {item.recipientOrSource || 'Register Till'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Cash-In (Sent to Vault) */}
+                      <td className="py-2.5 px-3 align-top text-right whitespace-nowrap bg-emerald-50/20 border-l border-emerald-100 font-mono">
+                        {item.cashIn > 0 ? (
+                          <span className="font-extrabold text-emerald-700 text-xs sm:text-sm bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 inline-block">
+                            +{formatPKR(item.cashIn)}
+                          </span>
+                        ) : (
+                          <span className="text-stone-300 font-normal select-none">—</span>
+                        )}
+                      </td>
+
+                      {/* Cash-Out (Came Out of Vault) */}
+                      <td className="py-2.5 px-3 align-top text-right whitespace-nowrap bg-rose-50/20 border-l border-rose-100 font-mono">
+                        {item.cashOut > 0 ? (
+                          <span className="font-extrabold text-rose-700 text-xs sm:text-sm bg-rose-50 px-2 py-0.5 rounded border border-rose-200/80 inline-block">
+                            -{formatPKR(item.cashOut)}
+                          </span>
+                        ) : (
+                          <span className="text-stone-300 font-normal select-none">—</span>
+                        )}
+                      </td>
+
+                      {/* Vault Running Balance */}
+                      <td className="py-2.5 px-3 align-top text-right whitespace-nowrap bg-slate-50 border-l border-slate-200 font-mono">
+                        <span className="font-extrabold text-slate-900 text-xs sm:text-sm bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs inline-block">
+                          {formatPKR(item.runningBalance)}
+                        </span>
+                      </td>
+
+                      {/* Actions (Edit & Delete) */}
+                      <td className="py-2.5 px-2 align-top text-center whitespace-nowrap border-l border-stone-200">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleEditLedgerItem(item)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-md text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
+                            title="Edit this entry amount, date, time, reason, or recipient"
+                          >
+                            <Edit3 className="w-3 h-3 text-indigo-700" />
+                            <span>Edit</span>
+                          </button>
+                          {!isBaseline && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLedgerItem(item)}
+                              className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-md transition-colors cursor-pointer"
+                              title="Delete or reverse this entry"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="py-8 px-4 text-center bg-stone-50/50">
+                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-stone-500">
+                      <FileSpreadsheet className="w-8 h-8 text-stone-300 mb-2" />
+                      <p className="text-xs font-bold text-stone-700">No vault ledger transactions found</p>
+                      <p className="text-[11px] text-stone-400 mt-0.5">
+                        {safeSearchQuery 
+                          ? `No entries match "${safeSearchQuery}". Try clearing your search.`
+                          : 'Use Container 2 above to move cash between Drawer, Safe, and Bank, or add a direct vault deposit.'}
+                      </p>
+                      {safeSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSafeSearchQuery('')}
+                          className="mt-2 px-3 py-1 bg-white border border-stone-300 text-stone-700 rounded-lg text-xs font-semibold hover:bg-stone-50 cursor-pointer"
+                        >
+                          Clear Search Filter
+                        </button>
+                      )}
                     </div>
-                    {onDeleteTransaction && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDeleteTransaction(item.id);
-                          onShowToast(`Reversed transfer of ${formatPKR(item.amount)} and restored balances.`, 'info');
-                        }}
-                        className="text-stone-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete and reverse this transfer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-3 bg-white/80 border border-dashed border-stone-200 rounded-lg text-center text-xs text-stone-500">
-            <span>No transfers in or out of the safe recorded yet today. Use the transfer tabs in Container 2 above to move cash between Drawer, Safe, and Bank.</span>
-          </div>
-        )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* Table Footer Summary Row */}
+            {filteredLedgerItems.length > 0 && (
+              <tfoot>
+                <tr className="bg-stone-100 border-t-2 border-stone-300 font-extrabold text-xs">
+                  <td colSpan={3} className="py-2.5 px-3 text-stone-800 uppercase tracking-wider text-[11px]">
+                    Ledger Totals ({filteredLedgerItems.length} entries displayed):
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-emerald-800 border-l border-stone-200 bg-emerald-50/60">
+                    +{formatPKR(totalSentToVault)}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-rose-800 border-l border-stone-200 bg-rose-50/60">
+                    -{formatPKR(totalCameOutOfVault)}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-slate-900 border-l border-stone-200 bg-slate-200/70 text-sm">
+                    {formatPKR(netVaultLedgerBalance)}
+                  </td>
+                  <td className="py-2.5 px-3 border-l border-stone-200 text-center text-stone-400">
+                    ✓
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
       </div>
 
       {/* SEPARATE VAULT CASH DEPOSITS SECTION (Committee, Capital, Bank Withdrawal, etc.) */}
@@ -2125,10 +2904,19 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-sm font-extrabold font-mono ${dep.isConsolidated ? 'text-stone-500 line-through' : dep.amount < 0 ? 'text-blue-700' : 'text-emerald-700'}`}>
                         {dep.amount < 0 ? '-' : '+'}{formatPKR(Math.abs(dep.amount))}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditDeposit(dep)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer shadow-2xs"
+                        title="Edit this vault deposit entry"
+                      >
+                        <Edit3 className="w-3 h-3 text-amber-700" />
+                        <span>Edit</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -2171,6 +2959,605 @@ export const CashSafeManager: React.FC<CashSafeManagerProps> = ({
           <span>
             Note: Cash transferred from drawer ({formatPKR(safeTransferAmount)}) exceeds current expected drawer balance ({formatPKR(expectedDrawerCash)}). Ensure any outside funds or discrepancy are reconciled.
           </span>
+        </div>
+      )}
+
+      {/* MODAL 1: EDIT SAFE IN/OUT TRANSACTION */}
+      {editingSafeActivity && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex min-h-full items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200"
+          onClick={() => setEditingSafeActivity(null)}
+        >
+          <div 
+            className="bg-white border border-stone-200 rounded-2xl w-full max-w-xl md:max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header (Pinned) */}
+            <div className="shrink-0 p-4 sm:p-5 border-b border-stone-200 bg-stone-50 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-stone-900 truncate">
+                    Edit Safe In/Out Transaction
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 shrink-0">
+                    Safe Movement
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 line-clamp-1">
+                  Update transfer amount, date/time, or reason. Vault and drawer balances update automatically.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingSafeActivity(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form id="form-edit-safe-activity" onSubmit={handleSaveEditActivity} className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-5 space-y-4 text-xs">
+              {/* Type / Direction Interactive Switcher */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                  Transfer Category &amp; Direction:
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-1.5 bg-stone-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditActivityDirection('drawer_to_safe');
+                      if (!editActivityDescription || editActivityDescription.includes('Bank') || editActivityDescription.includes('Drawing') || editActivityDescription.includes('Replenish')) {
+                        setEditActivityDescription('Day-End Cash Handover to Safe');
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer flex flex-col justify-between gap-1 min-h-[54px] ${
+                      editActivityDirection === 'drawer_to_safe'
+                        ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50 font-medium'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <ArrowDownToLine className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Drawer ➔ Safe</span>
+                    </span>
+                    <span className={`text-[10px] ${editActivityDirection === 'drawer_to_safe' ? 'text-emerald-100' : 'text-stone-400'}`}>
+                      Inflow to Vault
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditActivityDirection('safe_to_drawer');
+                      if (!editActivityDescription || editActivityDescription.includes('Handover') || editActivityDescription.includes('Bank') || editActivityDescription.includes('Drawing')) {
+                        setEditActivityDescription('Morning Float Replenishment');
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer flex flex-col justify-between gap-1 min-h-[54px] ${
+                      editActivityDirection === 'safe_to_drawer'
+                        ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50 font-medium'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Safe ➔ Drawer</span>
+                    </span>
+                    <span className={`text-[10px] ${editActivityDirection === 'safe_to_drawer' ? 'text-indigo-100' : 'text-stone-400'}`}>
+                      Float to register
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditActivityDirection('safe_to_bank');
+                      if (!editActivityDescription || editActivityDescription.includes('Handover') || editActivityDescription.includes('Float') || editActivityDescription.includes('Drawing')) {
+                        setEditActivityDescription('Cash Deposit from Safe Vault into Bank');
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer flex flex-col justify-between gap-1 min-h-[54px] ${
+                      editActivityDirection === 'safe_to_bank'
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50 font-medium'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <Landmark className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Safe ➔ Bank</span>
+                    </span>
+                    <span className={`text-[10px] ${editActivityDirection === 'safe_to_bank' ? 'text-blue-100' : 'text-stone-400'}`}>
+                      Deposit to bank
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditActivityDirection('safe_to_person');
+                      if (!editActivityDescription || editActivityDescription.includes('Handover to Safe') || editActivityDescription.includes('Bank') || editActivityDescription.includes('Float')) {
+                        setEditActivityDescription('Partner / Owner Drawing');
+                      }
+                    }}
+                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer flex flex-col justify-between gap-1 min-h-[54px] ${
+                      editActivityDirection === 'safe_to_person'
+                        ? 'bg-purple-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50 font-medium'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <User className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Safe ➔ Person</span>
+                    </span>
+                    <span className={`text-[10px] ${editActivityDirection === 'safe_to_person' ? 'text-purple-100' : 'text-stone-400'}`}>
+                      Owner / Drawing
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                  Transfer Amount (PKR) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-stone-400 select-none">
+                    Rs.
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    required
+                    value={editActivityAmount}
+                    onChange={e => setEditActivityAmount(e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-lg font-bold font-mono text-stone-900 focus:bg-white focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-hidden transition-all shadow-2xs"
+                  />
+                </div>
+
+                {/* Quick adjustments */}
+                <div className="grid grid-cols-5 gap-1 sm:gap-1.5 mt-2 text-[10px] sm:text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdjustEditActivity(1000)}
+                    className="py-1.5 bg-stone-100 hover:bg-indigo-50 hover:text-indigo-800 border border-stone-200 rounded-lg font-semibold text-stone-700 transition-colors cursor-pointer text-center"
+                  >
+                    +1k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdjustEditActivity(5000)}
+                    className="py-1.5 bg-stone-100 hover:bg-indigo-50 hover:text-indigo-800 border border-stone-200 rounded-lg font-semibold text-stone-700 transition-colors cursor-pointer text-center"
+                  >
+                    +5k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdjustEditActivity(10000)}
+                    className="py-1.5 bg-stone-100 hover:bg-indigo-50 hover:text-indigo-800 border border-stone-200 rounded-lg font-semibold text-stone-700 transition-colors cursor-pointer text-center"
+                  >
+                    +10k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdjustEditActivity(50000)}
+                    className="py-1.5 bg-stone-100 hover:bg-indigo-50 hover:text-indigo-800 border border-stone-200 rounded-lg font-semibold text-stone-700 transition-colors cursor-pointer text-center"
+                  >
+                    +50k
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdjustEditActivity(-10000)}
+                    className="py-1.5 bg-stone-100 hover:bg-rose-50 hover:text-rose-800 border border-stone-200 rounded-lg font-semibold text-stone-700 transition-colors cursor-pointer text-center"
+                  >
+                    -10k
+                  </button>
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editActivityDate}
+                    onChange={e => setEditActivityDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editActivityTime}
+                    onChange={e => setEditActivityTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono text-stone-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Description / Reason */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Description / Reason
+                </label>
+                <input
+                  type="text"
+                  value={editActivityDescription}
+                  onChange={e => setEditActivityDescription(e.target.value)}
+                  placeholder="e.g. Day-End Cash Handover to Safe"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-medium text-stone-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                />
+              </div>
+
+              {/* Recipient / Bank Name (Conditional/Optional) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    {editActivityDirection === 'safe_to_bank'
+                      ? 'Bank Account / Name'
+                      : editActivityDirection === 'safe_to_person'
+                      ? 'Recipient Individual'
+                      : editActivityDirection === 'drawer_to_safe'
+                      ? 'Handed Over By (Staff)'
+                      : 'Received By (Staff)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editActivityRecipient}
+                    onChange={e => setEditActivityRecipient(e.target.value)}
+                    placeholder={
+                      editActivityDirection === 'safe_to_bank'
+                        ? 'e.g. Askari Bank Ltd., Meezan Bank...'
+                        : editActivityDirection === 'safe_to_person'
+                        ? 'e.g. Partner / Owner, Staff Name...'
+                        : 'e.g. Counter Staff, Drawer ➔ Safe'
+                    }
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs text-stone-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Receipt / Voucher #
+                  </label>
+                  <input
+                    type="text"
+                    value={editActivityReceipt}
+                    onChange={e => setEditActivityReceipt(e.target.value)}
+                    placeholder="e.g. REC-1049"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono text-stone-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Internal Notes */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Internal Audit Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={editActivityNotes}
+                  onChange={e => setEditActivityNotes(e.target.value)}
+                  placeholder="Any additional remarks..."
+                  className="w-full px-3 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-xs text-stone-800 focus:bg-white focus:border-indigo-600 outline-hidden resize-none"
+                />
+              </div>
+
+              {/* Automated math notice */}
+              <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[11px] text-emerald-900 leading-relaxed">
+                🛡️ <strong>Live Reconciliation:</strong> Modifying this transfer amount immediately recalculates the Safe Vault Balance, Drawer Cash Register Till, and syncs your records in real time.
+              </div>
+            </form>
+
+            {/* Pinned Footer */}
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditingSafeActivity(null)}
+                className="px-4 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="form-edit-safe-activity"
+                className="px-5 py-2 bg-indigo-700 hover:bg-indigo-800 active:bg-indigo-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: EDIT SEPARATE VAULT CASH DEPOSIT */}
+      {editingVaultDeposit && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex min-h-full items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200"
+          onClick={() => setEditingVaultDeposit(null)}
+        >
+          <div 
+            className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg sm:max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header (Pinned) */}
+            <div className="shrink-0 p-4 sm:p-5 border-b border-stone-200 bg-stone-50 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-stone-900 truncate">
+                    Edit Vault Cash Deposit
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-300 shrink-0">
+                    Vault Injection
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 line-clamp-1">
+                  Update deposit amount, category, date, or notes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingVaultDeposit(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form id="form-edit-vault-deposit" onSubmit={handleSaveEditDeposit} className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-5 space-y-4 text-xs">
+              {/* Category selector */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                  Deposit Category:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {VAULT_CATEGORIES.map(cat => {
+                    const Icon = cat.icon;
+                    const isSelected = editDepositCategory === cat.category;
+                    return (
+                      <button
+                        key={cat.category}
+                        type="button"
+                        onClick={() => setEditDepositCategory(cat.category)}
+                        className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                          isSelected
+                            ? 'border-amber-600 bg-amber-50 ring-1 ring-amber-600 text-amber-950 font-bold'
+                            : 'border-stone-200 bg-stone-50 hover:bg-white text-stone-700'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-xs truncate">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Deposit Amount (PKR) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-stone-400 select-none">
+                    Rs.
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    required
+                    value={editDepositAmount}
+                    onChange={e => setEditDepositAmount(e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-lg font-bold font-mono text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editDepositDate}
+                    onChange={e => setEditDepositDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editDepositTime}
+                    onChange={e => setEditDepositTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Particulars / Remarks
+                </label>
+                <textarea
+                  rows={2}
+                  value={editDepositNotes}
+                  onChange={e => setEditDepositNotes(e.target.value)}
+                  placeholder="Notes about this vault deposit..."
+                  className="w-full px-3 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-xs text-stone-800 focus:bg-white focus:border-amber-600 outline-hidden resize-none"
+                />
+              </div>
+            </form>
+
+            {/* Pinned Footer */}
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditingVaultDeposit(null)}
+                className="px-4 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="form-edit-vault-deposit"
+                className="px-5 py-2.5 bg-amber-700 hover:bg-amber-800 active:bg-amber-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Update Vault Deposit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: EDIT VAULT BASELINE RESERVE */}
+      {isEditingBaselineModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex min-h-full items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200"
+          onClick={() => setIsEditingBaselineModalOpen(false)}
+        >
+          <div 
+            className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg sm:max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[min(90vh,calc(100dvh-2rem))] my-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header (Pinned) */}
+            <div className="shrink-0 p-4 sm:p-5 border-b border-stone-200 bg-stone-50 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-stone-900 truncate">
+                    Edit Vault Baseline Starting Reserve
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-950 border border-amber-300 shrink-0">
+                    Baseline Float
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 line-clamp-1">
+                  Adjust initial starting cash stored in the safe vault and its effective date/time.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingBaselineModalOpen(false)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form id="form-edit-baseline" onSubmit={handleSaveBaselineEdit} className="flex-1 overflow-y-auto overscroll-contain min-h-0 p-4 sm:p-5 space-y-4 text-xs">
+              {/* Amount */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Baseline Safe Cash Amount (PKR) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-stone-400 select-none">
+                    Rs.
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={editBaselineAmount}
+                    onChange={e => setEditBaselineAmount(e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-lg font-bold font-mono text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-4 gap-1.5 mt-2">
+                  {[295500, 433500, 500000, 1000000].map(amt => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setEditBaselineAmount(String(amt))}
+                      className="py-1.5 bg-stone-100 hover:bg-amber-50 hover:text-amber-900 border border-stone-200 rounded-lg text-xs font-mono font-bold text-stone-700 transition-colors cursor-pointer"
+                    >
+                      {formatPKR(amt)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Effective Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editBaselineDate}
+                    onChange={e => setEditBaselineDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                    Effective Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editBaselineTime}
+                    onChange={e => setEditBaselineTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono text-stone-900 focus:bg-white focus:border-amber-600 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-stone-700 leading-relaxed text-[11px]">
+                🛡️ <strong>Accounting Ledger Note:</strong> The baseline starting cash acts as the vault&apos;s initial balance row in your ledger, upon which subsequent day-end transfers and direct deposits build progressive running balances.
+              </div>
+            </form>
+
+            {/* Pinned Footer */}
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsEditingBaselineModalOpen(false)}
+                className="px-4 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="form-edit-baseline"
+                className="px-5 py-2.5 bg-amber-700 hover:bg-amber-800 active:bg-amber-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save Baseline Reserve</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
