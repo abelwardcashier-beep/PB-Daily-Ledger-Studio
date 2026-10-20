@@ -97,7 +97,7 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
         <label
           htmlFor="edit-internal"
           className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-            internal ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'
+            internal ? 'border-primary/40 bg-primary-tint/60' : 'border-border-subtle bg-bg-card hover:bg-bg-app'
           }`}
         >
           <input
@@ -105,11 +105,11 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
             type="checkbox"
             checked={internal}
             onChange={(e) => setInternal(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="mt-0.5 h-4 w-4 rounded border-border-default text-primary focus:ring-primary"
           />
           <span className="text-sm">
-            <span className="font-semibold text-slate-700">Internal transfer to the safe?</span>
-            <span className="block text-xs text-slate-500 mt-0.5">
+            <span className="font-semibold text-ink-soft">Internal transfer to the safe?</span>
+            <span className="block text-xs text-ink-soft mt-0.5">
               Excluded from Gross Sales &amp; Operating Expenses.
             </span>
           </span>

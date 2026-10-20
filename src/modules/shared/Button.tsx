@@ -13,12 +13,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm focus-visible:ring-indigo-500',
-  secondary: 'bg-white text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 shadow-sm focus-visible:ring-indigo-500',
-  success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm focus-visible:ring-emerald-400',
-  danger: 'bg-rose-500 text-white hover:bg-rose-600 shadow-sm focus-visible:ring-rose-400',
-  warning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm focus-visible:ring-amber-400',
-  ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-300',
+  primary: 'bg-primary text-on-dark hover:bg-primary-deep active:bg-primary-deep shadow-sm focus-visible:ring-primary',
+  secondary: 'bg-bg-card text-ink-soft ring-1 ring-inset ring-border-subtle hover:bg-bg-hover shadow-sm focus-visible:ring-primary',
+  success: 'bg-income text-on-dark hover:bg-income-deep shadow-sm focus-visible:ring-income/60',
+  danger: 'bg-expense text-on-dark hover:bg-expense-deep shadow-sm focus-visible:ring-expense/60',
+  warning: 'bg-gilded text-on-dark hover:bg-gilded-deep shadow-sm focus-visible:ring-gilded/60',
+  ghost: 'bg-transparent text-ink-soft hover:bg-bg-hover focus-visible:ring-border-default',
 };
 
 const SIZES: Record<ButtonSize, string> = {

@@ -23,7 +23,7 @@ export function VaultDashboard({ safeBalance }: VaultDashboardProps) {
         label="Safe Running Balance"
         value={formatCurrency(safeBalance)}
         icon={<ShieldCheckIcon className="h-6 w-6" />}
-        tone="indigo"
+        tone="primary"
       />
     </motion.div>
   );

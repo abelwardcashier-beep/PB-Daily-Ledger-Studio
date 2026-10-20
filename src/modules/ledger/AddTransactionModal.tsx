@@ -87,12 +87,12 @@ export function AddTransactionModal({ open, onClose, businessDate, onSubmit, onS
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Type toggle */}
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-bg-subtle p-1">
           <button
             type="button"
             onClick={() => switchKind('cash_in')}
             className={`rounded-md py-2 text-sm font-semibold transition-all ${
-              kind === 'cash_in' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              kind === 'cash_in' ? 'bg-bg-card text-income shadow-sm' : 'text-ink-soft hover:text-ink'
             }`}
           >
             Cash In
@@ -101,7 +101,7 @@ export function AddTransactionModal({ open, onClose, businessDate, onSubmit, onS
             type="button"
             onClick={() => switchKind('cash_out')}
             className={`rounded-md py-2 text-sm font-semibold transition-all ${
-              kind === 'cash_out' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              kind === 'cash_out' ? 'bg-bg-card text-expense shadow-sm' : 'text-ink-soft hover:text-ink'
             }`}
           >
             Cash Out
@@ -163,7 +163,7 @@ export function AddTransactionModal({ open, onClose, businessDate, onSubmit, onS
         <label
           htmlFor="add-tx-internal"
           className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-            internal ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'
+            internal ? 'border-primary/40 bg-primary-tint/60' : 'border-border-subtle bg-bg-card hover:bg-bg-app'
           }`}
         >
           <input
@@ -171,11 +171,11 @@ export function AddTransactionModal({ open, onClose, businessDate, onSubmit, onS
             type="checkbox"
             checked={internal}
             onChange={(e) => setInternal(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="mt-0.5 h-4 w-4 rounded border-border-default text-primary focus:ring-primary"
           />
           <span className="text-sm">
-            <span className="font-semibold text-slate-700">Is this an internal transfer to the safe?</span>
-            <span className="block text-xs text-slate-500 mt-0.5">
+            <span className="font-semibold text-ink-soft">Is this an internal transfer to the safe?</span>
+            <span className="block text-xs text-ink-soft mt-0.5">
               Excluded from Gross Sales &amp; Operating Expenses metrics.
             </span>
           </span>

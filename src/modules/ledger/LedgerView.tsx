@@ -104,12 +104,12 @@ export function LedgerView({ businessDate, openingBalance, isDayStarted, tx, vau
     return (
       <Card className="max-w-lg mx-auto mt-10 text-center" padded>
         <div className="py-8">
-          <div className="mx-auto h-14 w-14 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
-            <CalendarDaysIcon className="h-7 w-7 text-indigo-600" />
+          <div className="mx-auto h-14 w-14 rounded-xl bg-primary-tint flex items-center justify-center mb-4">
+            <CalendarDaysIcon className="h-7 w-7 text-primary" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900">Day not started</h2>
-          <p className="text-sm text-slate-500 mt-1.5 max-w-xs mx-auto">
-            Start <span className="font-semibold text-slate-700">{businessDate}</span> with an opening cash balance to begin posting entries.
+          <h2 className="text-lg font-bold text-ink">Day not started</h2>
+          <p className="text-sm text-ink-soft mt-1.5 max-w-xs mx-auto">
+            Start <span className="font-semibold text-ink-soft">{businessDate}</span> with an opening cash balance to begin posting entries.
           </p>
           <Button className="mt-6" size="lg" icon={<CalendarDaysIcon className="h-4 w-4" />} onClick={onStartDay}>
             Start New Day
@@ -123,10 +123,10 @@ export function LedgerView({ businessDate, openingBalance, isDayStarted, tx, vau
     <div className="space-y-6">
       {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Gross Sales" value={formatCurrency(tx.summary.grossSales)} tone="emerald" icon={<ClipboardDocumentListIcon className="h-5 w-5" />} hint={`${tx.transactions.filter((t) => t.category === 'Gross Sales').length} sales entries`} />
-        <StatCard label="Total Cash In" value={formatCurrency(tx.summary.totalCashIn)} tone="sky" icon={<ArrowDownCircleIcon className="h-5 w-5" />} />
-        <StatCard label="Total Cash Out" value={formatCurrency(tx.summary.totalCashOut)} tone="rose" icon={<ArrowUpCircleIcon className="h-5 w-5" />} hint={`Expenses at ${(tx.summary.expenseRatio * 100).toFixed(0)}% of inflow`} />
-        <StatCard label="Drawer Balance" value={formatCurrency(drawerBalance)} tone="amber" icon={<BanknotesIcon className="h-5 w-5" />} hint={`Opening ${formatCurrency(openingBalance)}`} />
+        <StatCard label="Gross Sales" value={formatCurrency(tx.summary.grossSales)} tone="income" icon={<ClipboardDocumentListIcon className="h-5 w-5" />} hint={`${tx.transactions.filter((t) => t.category === 'Gross Sales').length} sales entries`} />
+        <StatCard label="Total Cash In" value={formatCurrency(tx.summary.totalCashIn)} tone="lagoon" icon={<ArrowDownCircleIcon className="h-5 w-5" />} />
+        <StatCard label="Total Cash Out" value={formatCurrency(tx.summary.totalCashOut)} tone="expense" icon={<ArrowUpCircleIcon className="h-5 w-5" />} hint={`Expenses at ${(tx.summary.expenseRatio * 100).toFixed(0)}% of inflow`} />
+        <StatCard label="Drawer Balance" value={formatCurrency(drawerBalance)} tone="gilded" icon={<BanknotesIcon className="h-5 w-5" />} hint={`Opening ${formatCurrency(openingBalance)}`} />
       </div>
 
       {/* Form + counter / table */}
@@ -162,7 +162,7 @@ export function LedgerView({ businessDate, openingBalance, isDayStarted, tx, vau
             </div>
           }
         >
-          <div className="border-b border-slate-200 px-5 py-3">
+          <div className="border-b border-border-subtle px-5 py-3">
             <TransactionFilterBar
               businessDate={businessDate}
               onDateChange={() => undefined} /* date is owned by the app shell / hooks */
@@ -176,7 +176,7 @@ export function LedgerView({ businessDate, openingBalance, isDayStarted, tx, vau
           </div>
           <div className="p-5 pt-4">
             {tx.loading ? (
-              <div className="py-16 text-center text-sm text-slate-400 animate-pulse">Loading ledger…</div>
+              <div className="py-16 text-center text-sm text-ink-faint animate-pulse">Loading ledger…</div>
             ) : (
               <LedgerTable transactions={filteredTransactions} onEdit={setEditing} onDelete={handleDelete} />
             )}

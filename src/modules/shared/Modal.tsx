@@ -44,7 +44,7 @@ export function Modal({ open, onClose, title, description, children, footer }: M
         >
           {/* Backdrop — clicking it closes the dialog (outside click). */}
           <motion.div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
             onClick={onClose}
             aria-hidden
           />
@@ -56,16 +56,16 @@ export function Modal({ open, onClose, title, description, children, footer }: M
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative w-full max-w-md bg-white rounded-xl border border-slate-200 shadow-lg"
+            className="relative w-full max-w-md bg-bg-card rounded-xl border border-border-subtle shadow-lg"
           >
             <header className="flex items-start justify-between px-5 pt-5">
               <div>
-                <h2 className="text-base font-bold text-slate-900">{title}</h2>
-                {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
+                <h2 className="text-base font-bold text-ink">{title}</h2>
+                {description && <p className="text-sm text-ink-soft mt-1">{description}</p>}
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-bg-subtle transition-colors"
                 aria-label="Close dialog"
               >
                 <XMarkIcon className="h-5 w-5" />
