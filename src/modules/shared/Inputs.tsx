@@ -1,10 +1,10 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 
 const inputBase =
-  'w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-colors focus:outline-none focus:ring-2';
+  'w-full rounded-lg border bg-bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors focus:outline-none focus:ring-2';
 
-const normalState = 'border-slate-200 focus:ring-indigo-500/40 focus:border-indigo-400';
-const errorState = 'border-rose-500 focus:ring-rose-400/40 focus:border-rose-400';
+const normalState = 'border-border-subtle focus:ring-primary/40 focus:border-primary';
+const errorState = 'border-expense focus:ring-expense/40 focus:border-expense';
 
 export interface FieldProps {
   label: string;
@@ -19,15 +19,15 @@ export interface FieldProps {
 export function Field({ label, htmlFor, hint, required, error, children }: FieldProps) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">
+      <label htmlFor={htmlFor} className="block text-xs font-semibold text-ink-soft uppercase tracking-wide">
         {label}
-        {required && <span className="text-rose-500 ml-0.5">*</span>}
+        {required && <span className="text-expense ml-0.5">*</span>}
       </label>
       {children}
       {error ? (
-        <p className="text-xs font-medium text-rose-600">{error}</p>
+        <p className="text-xs font-medium text-expense">{error}</p>
       ) : (
-        hint && <p className="text-xs text-slate-400">{hint}</p>
+        hint && <p className="text-xs text-ink-faint">{hint}</p>
       )}
     </div>
   );

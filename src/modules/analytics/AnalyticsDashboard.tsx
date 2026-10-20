@@ -67,7 +67,7 @@ export function AnalyticsDashboard({ transactions, isLoading = false, error = nu
     return (
       <div className="grid gap-6 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="h-80 rounded-xl bg-slate-100 animate-pulse" />
+          <div key={i} className="h-80 rounded-xl bg-bg-subtle animate-pulse" />
         ))}
       </div>
     );

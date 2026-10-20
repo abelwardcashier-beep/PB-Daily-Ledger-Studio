@@ -63,12 +63,12 @@ export function IntakeForm({ businessDate, disabled, onSubmit }: IntakeFormProps
     <Card title="New Entry" subtitle={`Posting to ${businessDate}`} padded={false}>
       <form onSubmit={handleSubmit} className="p-5 pt-4 space-y-4">
         {/* Kind toggle */}
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-bg-subtle p-1">
           <button
             type="button"
             onClick={() => switchKind('cash_in')}
             className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-semibold transition-all ${
-              kind === 'cash_in' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              kind === 'cash_in' ? 'bg-bg-card text-income shadow-sm' : 'text-ink-soft hover:text-ink'
             }`}
           >
             <ArrowDownCircleIcon className="h-4 w-4" /> Cash In
@@ -77,7 +77,7 @@ export function IntakeForm({ businessDate, disabled, onSubmit }: IntakeFormProps
             type="button"
             onClick={() => switchKind('cash_out')}
             className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-semibold transition-all ${
-              kind === 'cash_out' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              kind === 'cash_out' ? 'bg-bg-card text-expense shadow-sm' : 'text-ink-soft hover:text-ink'
             }`}
           >
             <ArrowUpCircleIcon className="h-4 w-4" /> Cash Out
@@ -140,7 +140,7 @@ export function IntakeForm({ businessDate, disabled, onSubmit }: IntakeFormProps
         <label
           htmlFor="tx-internal"
           className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-            internal ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'
+            internal ? 'border-primary/40 bg-primary-tint/60' : 'border-border-subtle bg-bg-card hover:bg-bg-app'
           }`}
         >
           <input
@@ -148,11 +148,11 @@ export function IntakeForm({ businessDate, disabled, onSubmit }: IntakeFormProps
             type="checkbox"
             checked={internal}
             onChange={(e) => setInternal(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="mt-0.5 h-4 w-4 rounded border-border-default text-primary focus:ring-primary"
           />
           <span className="text-sm">
-            <span className="font-semibold text-slate-700">Internal transfer to the safe?</span>
-            <span className="block text-xs text-slate-500 mt-0.5">
+            <span className="font-semibold text-ink-soft">Internal transfer to the safe?</span>
+            <span className="block text-xs text-ink-soft mt-0.5">
               Moving drawer cash into the vault. Excluded from Gross Sales &amp; Operating Expenses.
             </span>
           </span>

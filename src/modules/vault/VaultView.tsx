@@ -31,9 +31,9 @@ interface VaultViewProps {
 }
 
 const TYPE_META: Record<VaultTxType, { icon: typeof ArrowDownCircleIcon; tone: string }> = {
-  deposit: { icon: ArrowDownCircleIcon, tone: 'text-amber-600 bg-amber-50' },
-  withdrawal: { icon: ArrowUpCircleIcon, tone: 'text-sky-600 bg-sky-50' },
-  internal_transfer: { icon: ArrowsRightLeftIcon, tone: 'text-indigo-600 bg-indigo-50' },
+  deposit: { icon: ArrowDownCircleIcon, tone: 'text-gilded bg-gilded-tint' },
+  withdrawal: { icon: ArrowUpCircleIcon, tone: 'text-lagoon bg-lagoon-tint' },
+  internal_transfer: { icon: ArrowsRightLeftIcon, tone: 'text-primary bg-primary-tint' },
 };
 
 export function VaultView({ businessDate, openingBalance, tx, vault, notify }: VaultViewProps) {
@@ -72,28 +72,28 @@ export function VaultView({ businessDate, openingBalance, tx, vault, notify }: V
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Safe Vault Balance" value={formatCurrency(vault.vaultBalance)} tone="amber" icon={<ShieldCheckIcon className="h-5 w-5" />} hint="All-time deposits − withdrawals" />
-        <StatCard label="Drawer (Cash-in-Hand)" value={formatCurrency(drawerBalance)} tone="emerald" icon={<BanknotesIcon className="h-5 w-5" />} hint={`Opening ${formatCurrency(openingBalance)}`} />
-        <StatCard label="Total Cash Position" value={formatCurrency(totalPosition)} tone="indigo" icon={<ArchiveBoxIcon className="h-5 w-5" />} hint="Drawer + Safe combined" />
+        <StatCard label="Safe Vault Balance" value={formatCurrency(vault.vaultBalance)} tone="gilded" icon={<ShieldCheckIcon className="h-5 w-5" />} hint="All-time deposits − withdrawals" />
+        <StatCard label="Drawer (Cash-in-Hand)" value={formatCurrency(drawerBalance)} tone="income" icon={<BanknotesIcon className="h-5 w-5" />} hint={`Opening ${formatCurrency(openingBalance)}`} />
+        <StatCard label="Total Cash Position" value={formatCurrency(totalPosition)} tone="primary" icon={<ArchiveBoxIcon className="h-5 w-5" />} hint="Drawer + Safe combined" />
       </div>
 
       {/* Drawer -> Safe visual */}
       <Card title="Cash Flow Between Drawer & Safe" subtitle="Deposits move cash out of the till into the vault" padded={false}>
         <div className="p-5 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Drawer</p>
-            <p className="mt-1 text-xl font-bold text-slate-900 tabular-nums">{formatCurrency(drawerBalance)}</p>
+          <div className="rounded-lg border border-border-subtle bg-bg-app p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Drawer</p>
+            <p className="mt-1 text-xl font-bold text-ink tabular-nums">{formatCurrency(drawerBalance)}</p>
           </div>
           <div className="flex justify-center">
-            <div className="flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2">
-              <ArrowUpCircleIcon className="h-4 w-4 text-indigo-600" />
-              <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Transfers</span>
-              <ArrowDownCircleIcon className="h-4 w-4 text-indigo-600" />
+            <div className="flex items-center gap-2 rounded-full bg-primary-tint px-4 py-2">
+              <ArrowUpCircleIcon className="h-4 w-4 text-primary" />
+              <span className="text-xs font-bold text-primary-deep uppercase tracking-wide">Transfers</span>
+              <ArrowDownCircleIcon className="h-4 w-4 text-primary" />
             </div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-500">Safe Vault</p>
-            <p className="mt-1 text-xl font-bold text-amber-700 tabular-nums">{formatCurrency(vault.vaultBalance)}</p>
+          <div className="rounded-lg border border-gilded/40 bg-gilded-tint p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gilded">Safe Vault</p>
+            <p className="mt-1 text-xl font-bold text-gilded-deep tabular-nums">{formatCurrency(vault.vaultBalance)}</p>
           </div>
         </div>
       </Card>
@@ -114,10 +114,10 @@ export function VaultView({ businessDate, openingBalance, tx, vault, notify }: V
             </Button>
           }
         >
-          <ul className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+          <ul className="divide-y divide-border-subtle max-h-[480px] overflow-y-auto">
             <AnimatePresence initial={false}>
               {vault.movements.length === 0 && (
-                <li className="p-8 text-center text-sm text-slate-400">No vault movements yet — record a deposit to begin.</li>
+                <li className="p-8 text-center text-sm text-ink-faint">No vault movements yet — record a deposit to begin.</li>
               )}
               {[...vault.movements]
                 .reverse()
@@ -131,19 +131,19 @@ export function VaultView({ businessDate, openingBalance, tx, vault, notify }: V
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -12 }}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors"
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-bg-hover/60 transition-colors"
                     >
                       <span className={`h-8 w-8 shrink-0 rounded-lg flex items-center justify-center ${meta.tone}`}>
                         <Icon className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{VAULT_TYPE_LABELS[m.type].split('(')[0]}</p>
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-sm font-semibold text-ink truncate">{VAULT_TYPE_LABELS[m.type].split('(')[0]}</p>
+                        <p className="text-xs text-ink-faint truncate">
                           {formatDate(m.business_date)}
                           {m.note ? ` · ${m.note}` : ''}
                         </p>
                       </div>
-                      <span className={`text-sm font-bold tabular-nums ${m.type === 'deposit' ? 'text-amber-600' : m.type === 'withdrawal' ? 'text-sky-600' : 'text-indigo-600'}`}>
+                      <span className={`text-sm font-bold tabular-nums ${m.type === 'deposit' ? 'text-gilded' : m.type === 'withdrawal' ? 'text-lagoon' : 'text-primary'}`}>
                         {formatCurrency(m.amount)}
                       </span>
                       {confirmId === m.id ? (
@@ -158,7 +158,7 @@ export function VaultView({ businessDate, openingBalance, tx, vault, notify }: V
                       ) : (
                         <button
                           onClick={() => setConfirmId(m.id)}
-                          className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="p-1.5 rounded-md text-ink-faint hover:text-expense hover:bg-expense-tint transition-colors"
                           aria-label="Delete movement"
                         >
                           <TrashIcon className="h-4 w-4" />

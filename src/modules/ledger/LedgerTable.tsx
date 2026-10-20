@@ -50,24 +50,24 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex rounded-lg bg-slate-100 p-1">
+        <div className="flex rounded-lg bg-bg-subtle p-1">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={`relative rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filter === f.key ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+                filter === f.key ? 'text-ink' : 'text-ink-soft hover:text-ink'
               }`}
             >
               {filter === f.key && (
-                <motion.span layoutId="tx-filter-pill" className="absolute inset-0 rounded-md bg-white shadow-sm" />
+                <motion.span layoutId="tx-filter-pill" className="absolute inset-0 rounded-md bg-bg-card shadow-sm" />
               )}
               <span className="relative">{f.label}</span>
             </button>
           ))}
         </div>
         <div className="relative flex-1 sm:max-w-xs sm:ml-auto">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
           <TextInput
             className="pl-9"
             placeholder="Search amount, category, note…"
@@ -82,7 +82,7 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
       <div className="overflow-x-auto -mx-5 px-5">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-border-subtle text-left text-xs font-semibold uppercase tracking-wide text-ink-faint">
               <th className="py-2.5 pr-3 font-semibold">Type</th>
               <th className="py-2.5 pr-3 font-semibold">Category</th>
               <th className="py-2.5 pr-3 font-semibold hidden md:table-cell">Description</th>
@@ -90,7 +90,7 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
               <th className="py-2.5 font-semibold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border-subtle">
             <AnimatePresence initial={false}>
               {rows.map((t) => {
                 const style = CATEGORY_STYLES[t.category];
@@ -102,12 +102,12 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -12 }}
                     transition={{ duration: 0.18 }}
-                    className="group hover:bg-slate-50/70 transition-colors"
+                    className="group hover:bg-bg-hover/60 transition-colors"
                   >
                     <td className="py-3 pr-3">
                       <span
                         className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
-                          t.kind === 'cash_in' ? 'text-emerald-600' : 'text-rose-600'
+                          t.kind === 'cash_in' ? 'text-income' : 'text-expense'
                         }`}
                       >
                         {t.kind === 'cash_in' ? (
@@ -124,12 +124,12 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
                         {t.category}
                       </span>
                     </td>
-                    <td className="py-3 pr-3 hidden md:table-cell text-slate-600 max-w-56 truncate" title={t.description ?? ''}>
-                      {t.description ?? <span className="text-slate-300">—</span>}
+                    <td className="py-3 pr-3 hidden md:table-cell text-ink-soft max-w-56 truncate" title={t.description ?? ''}>
+                      {t.description ?? <span className="text-ink-faint">—</span>}
                     </td>
                     <td
                       className={`py-3 pr-3 text-right font-bold tabular-nums ${
-                        t.kind === 'cash_in' ? 'text-emerald-600' : 'text-rose-600'
+                        t.kind === 'cash_in' ? 'text-income' : 'text-expense'
                       }`}
                     >
                       {t.kind === 'cash_in' ? '+' : '−'}
@@ -138,14 +138,14 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
                     <td className="py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => onEdit(t)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        className="p-1.5 rounded-md text-ink-faint hover:text-primary hover:bg-primary-tint transition-colors"
                         aria-label="Edit transaction"
                       >
                         <PencilSquareIcon className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => onDelete(t.id)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        className="p-1.5 rounded-md text-ink-faint hover:text-expense hover:bg-expense-tint transition-colors"
                         aria-label="Delete transaction"
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -157,7 +157,7 @@ export function LedgerTable({ transactions, onEdit, onDelete }: LedgerTableProps
             </AnimatePresence>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-slate-400">
+                <td colSpan={5} className="py-10 text-center text-sm text-ink-faint">
                   No entries match your filters yet.
                 </td>
               </tr>

@@ -36,10 +36,10 @@ function ChartTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md text-xs">
-      {label !== undefined && <p className="font-bold text-slate-900 mb-1">{label}</p>}
+    <div className="rounded-lg border border-border-subtle bg-bg-card px-3 py-2 shadow-md text-xs">
+      {label !== undefined && <p className="font-bold text-ink mb-1">{label}</p>}
       {payload.map((entry, i) => (
-        <p key={i} className="flex items-center gap-1.5 text-slate-600">
+        <p key={i} className="flex items-center gap-1.5 text-ink-soft">
           <span className="h-2 w-2 rounded-full" style={{ background: entry.color }} />
           <span className="capitalize">{String(entry.name)}:</span>
           <span className="font-semibold tabular-nums">{formatCurrency(Number(entry.value ?? 0))}</span>
@@ -114,7 +114,7 @@ export function WeeklyBarsChart({ data }: { data: Array<{ week: string; cashIn: 
   );
 }
 
-const PIE_COLORS = ['#F43F5E', '#F59E0B', '#4F46E5', '#0EA5E9', '#8B5CF6', '#10B981', '#64748B'];
+const PIE_COLORS = ['#BE123C', '#D97706', '#2D5F4A', '#0E7490', '#7C5C8A', '#059669', '#7A7468'];
 
 /** Expense category donut. */
 export function CategoryPieChart({ data }: { data: Array<{ category: string; amount: number }> }) {
@@ -135,9 +135,9 @@ export function CategoryPieChart({ data }: { data: Array<{ category: string; amo
         {data.map((d, i) => (
           <li key={d.category} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-            <span className="text-slate-600 truncate">{d.category}</span>
-            <span className="ml-auto font-semibold text-slate-900 tabular-nums">{formatCurrency(d.amount)}</span>
-            <span className="w-12 text-right text-xs text-slate-400 tabular-nums">
+            <span className="text-ink-soft truncate">{d.category}</span>
+            <span className="ml-auto font-semibold text-ink tabular-nums">{formatCurrency(d.amount)}</span>
+            <span className="w-12 text-right text-xs text-ink-faint tabular-nums">
               {total > 0 ? ((d.amount / total) * 100).toFixed(0) : 0}%
             </span>
           </li>
@@ -198,7 +198,7 @@ export interface ExpenseCategoryBarChartProps {
 /** Horizontal bar chart: top expense categories for the current month. */
 export function ExpenseCategoryBarChart({ data, color = CHART_COLORS.net }: ExpenseCategoryBarChartProps) {
   if (data.length === 0) {
-    return <p className="py-20 text-center text-sm text-slate-400">No expenses recorded this month.</p>;
+    return <p className="py-20 text-center text-sm text-ink-faint">No expenses recorded this month.</p>;
   }
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -206,7 +206,7 @@ export function ExpenseCategoryBarChart({ data, color = CHART_COLORS.net }: Expe
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} horizontal={false} />
         <XAxis type="number" {...axisProps} tickFormatter={formatCurrencyCompact} />
         <YAxis type="category" dataKey="category" {...axisProps} width={100} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: '#F1F5F9' }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: '#F5F0E8' }} />
         <Bar dataKey="amount" name="Amount" fill={color} radius={[0, 4, 4, 0]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>

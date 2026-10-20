@@ -132,7 +132,7 @@ export function VaultDepositForm({ businessDate, disabled, onAddDeposit, onSubmi
         Add Vault Deposit
       </Button>
 
-      <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+      <p className="flex items-center gap-1.5 text-[11px] text-ink-faint">
         <BanknotesIcon className="h-3.5 w-3.5" />
         Deposits increase the safe running balance instantly via Supabase Realtime.
       </p>

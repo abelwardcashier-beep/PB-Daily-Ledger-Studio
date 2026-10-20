@@ -48,13 +48,13 @@ export function TransactionFilterBar({
   return (
     <div className="flex flex-wrap items-end gap-3">
       {/* Date picker */}
-      <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/40">
-        <CalendarDaysIcon className="h-4 w-4 text-slate-400" />
+      <label className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-card px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/40">
+        <CalendarDaysIcon className="h-4 w-4 text-ink-faint" />
         <input
           type="date"
           value={businessDate}
           onChange={(e) => e.target.value && onDateChange(e.target.value)}
-          className="bg-transparent text-xs font-semibold text-slate-700 tabular-nums focus:outline-none"
+          className="bg-transparent text-xs font-semibold text-ink-soft tabular-nums focus:outline-none"
           aria-label="Filter by date"
         />
       </label>
@@ -119,7 +119,7 @@ export function TransactionFilterBar({
         variant="secondary"
         size="sm"
         className="ml-auto"
-        icon={<FunnelIcon className="h-4 w-4 text-indigo-600" />}
+        icon={<FunnelIcon className="h-4 w-4 text-primary" />}
         disabled={exportDisabled}
         onClick={onExport}
       >
