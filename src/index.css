@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
-@import "tailwindcss";
+
+/* Tailwind v3 (PostCSS pipeline — guaranteed Vercel compatibility) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ────────────────────────────────────────────────────────────────
  * Design System: "Warm Minimalist Editorial"
@@ -49,185 +53,21 @@
 }
 
 /* ────────────────────────────────────────────────────────────────
- * Tailwind v4 theme bridge — maps the palette above onto utility
- * classes so every component renders in the new visual identity.
+ * Base layer — typography & warm canvas defaults.
+ * (Tailwind v3: the colour/font/shadow/radius theme mapping lives in
+ * tailwind.config.js; these raw CSS variables remain the single
+ * source of truth and are also used via arbitrary values, e.g.
+ * bg-[var(--bg-card)].)
  * ──────────────────────────────────────────────────────────────── */
-@theme {
-  /* Fonts — editorial pairing: Playfair Display serif headings, Inter UI text */
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
 
-  /* Backgrounds */
-  --color-canvas: var(--bg-app);
-  --color-surface: var(--bg-card);
-  --color-bg-app: var(--bg-app);
-  --color-bg-card: var(--bg-card);
-  --color-bg-subtle: var(--bg-subtle);
-  --color-bg-hover: var(--bg-hover);
-
-  /* Borders */
-  --color-border-subtle: var(--border-subtle);
-  --color-border-default: var(--border-default);
-  --color-border-focus: var(--border-focus);
-
-  /* Typography colours */
-  --color-ink: var(--text-primary);
-  --color-ink-soft: var(--text-secondary);
-  --color-ink-faint: var(--text-muted);
-  --color-on-dark: var(--text-inverse);
-
-  /* Primary — deep forest green ramp */
-  --color-primary: var(--primary);
-  --color-primary-deep: var(--primary-hover);
-  --color-primary-tint: var(--primary-light);
-
-  /* Accent ramps */
-  --color-gilded: var(--accent-amber);
-  --color-gilded-deep: #B45309;
-  --color-gilded-tint: var(--accent-amber-light);
-  --color-blush: var(--accent-rose);
-  --color-blush-deep: #9F1239;
-  --color-blush-tint: var(--accent-rose-light);
-  --color-verdant: var(--accent-emerald);
-  --color-verdant-deep: #047857;
-  --color-verdant-tint: var(--accent-emerald-light);
-  --color-lagoon: #0E7490;
-  --color-lagoon-tint: #E0F2F7;
-  --color-income: var(--accent-emerald);
-  --color-income-deep: #047857;
-  --color-income-tint: var(--accent-emerald-light);
-  --color-expense: var(--accent-rose);
-  --color-expense-deep: #9F1239;
-  --color-expense-tint: var(--accent-rose-light);
-  --color-plum: #7C5C8A;
-  --color-plum-deep: #5D4668;
-  --color-plum-tint: #F1EAF2;
-  --color-sienna: #C2410C;
-  --color-sienna-deep: #9A3412;
-  --color-sienna-tint: #FDEBD9;
-
-  /* Remap legacy Tailwind colour names onto the warm palette.
-   * Slate is now a warm greige scale — no cool grays anywhere. */
-  --color-slate-50: var(--bg-app);
-  --color-slate-100: var(--bg-subtle);
-  --color-slate-200: var(--border-subtle);
-  --color-slate-300: var(--border-default);
-  --color-slate-400: var(--text-muted);
-  --color-slate-500: #7A7468;
-  --color-slate-600: var(--text-secondary);
-  --color-slate-700: #3D3A33;
-  --color-slate-800: #262421;
-  --color-slate-900: var(--text-primary);
-  --color-slate-950: #141210;
-
-  /* Indigo → forest-green primary ramp */
-  --color-indigo-50: var(--primary-light);
-  --color-indigo-100: var(--primary-light);
-  --color-indigo-200: #C4D8CE;
-  --color-indigo-300: #9DC0B0;
-  --color-indigo-400: #568570;
-  --color-indigo-500: var(--primary);
-  --color-indigo-600: var(--primary);
-  --color-indigo-700: var(--primary-hover);
-  --color-indigo-800: #1C3B2E;
-  --color-indigo-900: #163026;
-
-  /* Emerald / green → bright income emerald */
-  --color-emerald-50: var(--accent-emerald-light);
-  --color-emerald-100: var(--accent-emerald-light);
-  --color-emerald-200: #A7F3D0;
-  --color-emerald-300: #6EE7B7;
-  --color-emerald-400: #34D399;
-  --color-emerald-500: var(--accent-emerald);
-  --color-emerald-600: var(--accent-emerald);
-  --color-emerald-700: #047857;
-  --color-emerald-800: #065F46;
-
-  /* Rose → deep expense rose */
-  --color-rose-50: var(--accent-rose-light);
-  --color-rose-100: var(--accent-rose-light);
-  --color-rose-200: #FECDD3;
-  --color-rose-300: #FDA4AF;
-  --color-rose-400: #FB7185;
-  --color-rose-500: var(--accent-rose);
-  --color-rose-600: var(--accent-rose);
-  --color-rose-700: #9F1239;
-  --color-rose-800: #881337;
-
-  /* Amber → warm gilded accent */
-  --color-amber-50: var(--accent-amber-light);
-  --color-amber-100: #FDE68A;
-  --color-amber-200: #FCD34D;
-  --color-amber-300: #FBBF24;
-  --color-amber-400: #F59E0B;
-  --color-amber-500: var(--accent-amber);
-  --color-amber-600: var(--accent-amber);
-  --color-amber-700: #B45309;
-  --color-amber-800: #92400E;
-
-  /* Sky / teal / cyan → muted lagoon family */
-  --color-sky-50: #E0F2F7;
-  --color-sky-100: #CDEAF3;
-  --color-sky-200: #9AD2E3;
-  --color-sky-500: #0E7490;
-  --color-sky-600: #0E7490;
-  --color-sky-700: #155E75;
-  --color-teal-50: #E6F2EE;
-  --color-teal-200: #B5D8CB;
-  --color-teal-500: #0F766E;
-  --color-teal-600: #0F766E;
-  --color-teal-700: #115E59;
-  --color-cyan-500: #0E7490;
-
-  /* Violet / purple / fuchsia / pink → antique plum tints */
-  --color-violet-50: #F1EAF2;
-  --color-violet-200: #DCCBE0;
-  --color-violet-500: #7C5C8A;
-  --color-violet-600: #7C5C8A;
-  --color-violet-700: #5D4668;
-  --color-purple-500: #7C5C8A;
-  --color-fuchsia-500: #A21CAF;
-  --color-pink-500: var(--accent-rose);
-
-  /* Orange → burnt sienna */
-  --color-orange-50: #FDEBD9;
-  --color-orange-200: #F6C79A;
-  --color-orange-500: #C2410C;
-  --color-orange-600: #C2410C;
-  --color-orange-700: #9A3412;
-
-  /* Yellow → ochre */
-  --color-yellow-500: #CA8A04;
-
-  /* Red → deep rose */
-  --color-red-500: var(--accent-rose);
-  --color-red-600: var(--accent-rose);
-
-  /* Cool neutrals (gray / zinc / neutral / stone) → warm greige */
-  --color-gray-50: var(--bg-app);
-  --color-gray-100: var(--bg-subtle);
-  --color-gray-200: var(--border-subtle);
-  --color-gray-300: var(--border-default);
-  --color-gray-400: var(--text-muted);
-  --color-gray-500: #7A7468;
-  --color-gray-600: var(--text-secondary);
-  --color-gray-700: #3D3A33;
-  --color-gray-800: #262421;
-  --color-gray-900: var(--text-primary);
-  --color-zinc-500: #7A7468;
-  --color-neutral-500: #7A7468;
-  --color-stone-500: #7A7468;
-
-  /* Radii — mapped to the token scale */
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-md);
-  --radius-xl: var(--radius-lg);
-  --radius-2xl: var(--radius-xl);
-
-  /* Shadows — soft & warm */
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    letter-spacing: -0.02em;
+  }
 }
 
 body {
