@@ -38,8 +38,5 @@ export const CHART_COLORS = {
   axis: '#9A9A9A',     /* --text-muted */
 } as const;
 
-/** Target amount that should be sitting inside the safe vault (PKR). */
-export const VAULT_TARGET_BALANCE = 433_500;
-
 /** Denominations used by the cash counter (PKR notes) */
 export const DENOMINATIONS = [5000, 1000, 500, 100, 50, 20, 10] as const;

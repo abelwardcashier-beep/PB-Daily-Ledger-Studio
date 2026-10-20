@@ -273,7 +273,7 @@ export default function App() {
               ) : activeView === 'ledger' ? (
                 <LedgerDashboard summary={tx.summary} netFlow={netFlow} />
               ) : activeView === 'vault' ? (
-                <VaultDashboard safeBalance={vault.safeRunningBalance} />
+                <VaultDashboard safeRunningBalance={vault.safeRunningBalance} />
               ) : (
                 <AnalyticsDashboard
                   transactions={tx.transactions}

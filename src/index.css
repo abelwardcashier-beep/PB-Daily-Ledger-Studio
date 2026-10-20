@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ────────────────────────────────────────────────────────────────
@@ -52,9 +53,9 @@
  * classes so every component renders in the new visual identity.
  * ──────────────────────────────────────────────────────────────── */
 @theme {
-  /* Fonts — editorial pairing: serif headings, humanist UI text */
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  /* Fonts — editorial pairing: Playfair Display serif headings, Inter UI text */
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
 
   /* Backgrounds */
   --color-canvas: var(--bg-app);
@@ -230,14 +231,14 @@
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg-app);
   color: var(--text-primary);
 }
 
-h1, h2, h3 {
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
+h1, h2, h3, h4 {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: -0.02em;
 }
 
 ::selection {
